@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const session = await getServerSession(req, res, authOptions);
-  
+
   if (!session) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Remove user from group
     await Group.findByIdAndUpdate(groupId, {
-      $pull: { 
+      $pull: {
         members: session.user.id,
         admins: session.user.id,
         allowedUsers: session.user.id,
@@ -33,7 +33,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Remove group from user's groups
     await User.findByIdAndUpdate(session.user.id, {
-      $pull: { groups: groupId }
+      $pull: {
+        groups: groupId,
+        joinedGroups: { groupId: groupId }
+      }
     });
 
     res.status(200).json({ message: 'Left group successfully' });

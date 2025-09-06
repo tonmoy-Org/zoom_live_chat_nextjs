@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { MessageCircle, Users, Settings, Plus, LogOut, Search } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function ChatDashboard() {
   const { data: session, status } = useSession();
@@ -19,6 +21,8 @@ export default function ChatDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [leavingGroupId, setLeavingGroupId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [groupToLeave, setGroupToLeave] = useState<{ id: string, name: string } | null>(null);
+  const { toast, dismiss } = useToast();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -34,9 +38,20 @@ export default function ChatDashboard() {
       if (response.ok) {
         const data = await response.json();
         setGroups(data.groups);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch groups.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('Error fetching groups:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred while fetching groups.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -44,8 +59,16 @@ export default function ChatDashboard() {
 
   const handleJoinGroup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsJoining(true);
+    if (!inviteCode.trim()) {
+      toast({
+        title: 'Invalid Input',
+        description: 'Please enter a valid invite code.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
+    setIsJoining(true);
     try {
       const response = await fetch('/api/groups/join', {
         method: 'POST',
@@ -57,25 +80,69 @@ export default function ChatDashboard() {
 
       if (response.ok) {
         const data = await response.json();
-        fetchGroups(); // Refresh groups list
+        await fetchGroups();
+        toast({
+          title: 'Success',
+          description: `Successfully joined "${data.group.name}"!`,
+        });
         router.push(`/chat/${data.group._id}`);
       } else {
         const error = await response.json();
-        alert(error.message);
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to join group.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      alert('Failed to join group');
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred while joining the group.',
+        variant: 'destructive',
+      });
     } finally {
       setIsJoining(false);
       setInviteCode('');
     }
   };
 
-  const handleLeaveGroup = async (groupId: string, groupName: string) => {
-    if (!confirm(`Are you sure you want to leave "${groupName}"?`)) {
-      return;
-    }
+  const promptLeaveGroup = (groupId: string, groupName: string) => {
+    setGroupToLeave({ id: groupId, name: groupName });
 
+    // Show confirmation toast
+    toast({
+      title: `Leave "${groupName}"?`,
+      description: "Are you sure you want to leave this group?",
+      variant: "default",
+      action: (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              // Dismiss the toast
+              dismiss();
+              setGroupToLeave(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              // Dismiss the toast and proceed with leaving
+              handleLeaveGroup(groupId, groupName);
+            }}
+          >
+            Leave
+          </Button>
+        </div>
+      ),
+    });
+  };
+
+  const handleLeaveGroup = async (groupId: string, groupName: string) => {
     setLeavingGroupId(groupId);
     try {
       const response = await fetch(`/api/groups/${groupId}/leave`, {
@@ -83,14 +150,56 @@ export default function ChatDashboard() {
       });
 
       if (response.ok) {
-        fetchGroups(); // Refresh groups list
+        await fetchGroups();
+        toast({
+          title: 'Success',
+          description: `You have left "${groupName}".`,
+        });
       } else {
-        alert('Failed to leave group');
+        toast({
+          title: 'Error',
+          description: 'Failed to leave group.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      alert('Failed to leave group');
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred while leaving the group.',
+        variant: 'destructive',
+      });
     } finally {
       setLeavingGroupId(null);
+      setGroupToLeave(null);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      // Show loading toast
+      toast({
+        title: "Signing out...",
+        description: "Please wait",
+        variant: "default",
+        duration: 1000,
+      });
+
+      // Add a small delay to show the loading toast
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Perform sign out
+      await signOut({ callbackUrl: '/login' });
+
+      // Store flag to show success toast on login page
+      localStorage.setItem('showLogoutToast', 'true');
+
+    } catch (error) {
+      toast({
+        title: "Sign Out Failed",
+        description: "Unable to sign out. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
     }
   };
 
@@ -101,59 +210,75 @@ export default function ChatDashboard() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="max-w-4xl mx-auto p-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {session?.user.name}
-          </h1>
-          <p className="text-gray-600">Choose a chat group or join a new one</p>
+    <div className="min-h-screen bg-gray-100">
+      <Toaster />
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+        {/* Header */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              Welcome, {session?.user.name}
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">Choose a chat group or join a new one</p>
+          </div>
+          <Button
+            onClick={handleSignOut}
+            variant="outline"
+            className="w-full sm:w-auto border-gray-300 hover:bg-gray-100 text-gray-600"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
         </div>
+
         {/* Join Group Card */}
-        {/* <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-blue-700">
-              <Plus className="w-5 h-5" />
-              Join a Group
-            </CardTitle>
-            <CardDescription>Enter an invite code to join a new group</CardDescription>
+        {/* <Card className="mb-6 border-0 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Plus className="w-5 h-5 text-blue-600" />
+              <CardTitle className="text-lg">Join a Group</CardTitle>
+            </div>
+            <CardDescription>Enter an invite code to join a group</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleJoinGroup} className="flex gap-2">
+            <form onSubmit={handleJoinGroup} className="flex flex-col sm:flex-row gap-3">
               <Input
-                placeholder="Enter invite code"
+                placeholder="Enter invite code..."
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value)}
-                className="flex-1"
-                required
+                className="flex-1 rounded-full border-gray-300 focus:ring-2 focus:ring-blue-500"
+                disabled={isJoining}
               />
               <Button
                 type="submit"
                 disabled={isJoining || !inviteCode.trim()}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="sm:w-auto bg-blue-600 hover:bg-blue-700 rounded-full"
               >
-                {isJoining ? 'Joining...' : 'Join'}
+                {isJoining ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                ) : (
+                  'Join Group'
+                )}
               </Button>
             </form>
           </CardContent>
         </Card> */}
 
         {/* My Groups Card */}
-        <Card className="border-0 shadow-lg">
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-emerald-500" />
-                <CardTitle>My Groups</CardTitle>
+                <Users className="w-5 h-5 text-emerald-600" />
+                <CardTitle className="text-lg">My Groups</CardTitle>
               </div>
-
               {groups.length > 0 && (
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -161,7 +286,7 @@ export default function ChatDashboard() {
                     placeholder="Search groups..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-full sm:w-48"
+                    className="pl-10 w-full sm:w-64 rounded-full border-gray-300 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               )}
@@ -172,47 +297,43 @@ export default function ChatDashboard() {
             {groups.length === 0 ? (
               <div className="text-center py-8">
                 <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 mb-1">No groups yet</p>
-                <p className="text-sm text-gray-400">Join a group to start chatting</p>
+                <p className="text-gray-600 font-medium">No groups yet</p>
+                <p className="text-sm text-gray-500">Join a group to start chatting</p>
               </div>
             ) : filteredGroups.length === 0 ? (
               <div className="text-center py-8">
                 <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No groups match your search</p>
+                <p className="text-gray-600 font-medium">No groups match your search</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {filteredGroups.map((group: any) => (
                   <div
                     key={group._id}
-                    className="p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors duration-200 border border-gray-200"
+                    className="p-4 bg-white hover:bg-gray-50 rounded-lg transition-colors duration-200 border border-gray-200"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 truncate">{group.name}</h3>
+                        <h3 className="text-base font-semibold text-gray-900 truncate">{group.name}</h3>
                         {group.description && (
                           <p className="text-sm text-gray-500 truncate">{group.description}</p>
                         )}
                       </div>
-
                       <div className="flex gap-2 self-end sm:self-auto">
-                        {/* Open Chat Button */}
                         <Link href={`/chat/${group._id}`} className="flex-1 sm:flex-none">
                           <Button
                             size="sm"
-                            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+                            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 rounded-full"
                           >
                             Open Chat
                           </Button>
                         </Link>
-
-                        {/* Leave Button */}
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleLeaveGroup(group._id, group.name)}
+                          onClick={() => promptLeaveGroup(group._id, group.name)}
                           disabled={leavingGroupId === group._id}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                          className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 rounded-full"
                         >
                           {leavingGroupId === group._id ? 'Leaving...' : 'Leave'}
                         </Button>
@@ -227,24 +348,22 @@ export default function ChatDashboard() {
 
         {/* Admin Panel */}
         {session?.user.role === 'admin' && (
-          <div className="mt-6">
-            <Card className="border-0 shadow-lg border-l-4 border-l-blue-500">
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Admin Panel</h3>
-                    <p className="text-gray-600">Manage users and groups</p>
-                  </div>
-                  <Link href="/admin" className="flex-1 sm:flex-none">
-                    <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600">
-                      <Settings className="w-4 h-4 mr-2" />
-                      Manage
-                    </Button>
-                  </Link>
+          <Card className="mt-6 border-0 shadow-sm border-l-4 border-blue-600">
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Admin Panel</h3>
+                  <p className="text-sm text-gray-600">Manage users and groups</p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                <Link href="/admin" className="flex-1 sm:flex-none">
+                  <Button className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 rounded-full">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Manage
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
