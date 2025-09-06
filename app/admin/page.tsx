@@ -1202,7 +1202,7 @@ export default function AdminDashboard() {
                 <Label>Banner Image</Label>
                 <div className="mt-2">
                   {bannerImageUrl && (
-                    <div className="relative w-full h-32 border rounded-lg overflow-hidden mb-2">
+                    <div className="relative w-full h-52 border rounded-lg overflow-hidden mb-2">
                       <Image
                         fill
                         src={bannerImageUrl}
