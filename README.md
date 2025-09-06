@@ -98,4 +98,5 @@ The `ChatGroup` component is a React-based group chat interface for **Zoom Live 
 
 ## License
 
-MIT License. See `LICENSE` file for details.
+This project is licensed under the [MIT License](LICENSE).  
+See the LICENSE file for details.
