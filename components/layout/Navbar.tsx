@@ -3,7 +3,7 @@
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { User, Settings, LogOut, MailSearch, Menu, X } from 'lucide-react';
+import { User, Settings, LogOut, Mail, Menu, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,12 +19,11 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 
-
 export default function Navbar() {
   const { data: session } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const { toast } = useToast(); // Initialize the toast hook
+  const { toast } = useToast();
 
   // Handle scroll effect for navbar
   useEffect(() => {
@@ -35,31 +34,25 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Handle logout with toast notifications
   const handleLogout = async () => {
     try {
-      // Show loading toast
       toast({
-        title: "Logging out...",
-        description: "Please wait",
-        variant: "default",
-        duration: 1000,
+        title: 'Signing out...',
+        description: 'Please wait while we sign you out.',
+        variant: 'default',
+        duration: 1500,
       });
 
-      // Add a small delay to show the loading toast
       await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Perform logout
       await signOut({ callbackUrl: '/login' });
 
-      // Show success toast (this will show after redirect to login page)
-      // We'll also show a toast on the login page to confirm logout
       localStorage.setItem('showLogoutToast', 'true');
-
     } catch (error) {
       toast({
-        title: "Logout Failed",
-        description: "Unable to logout. Please try again.",
-        variant: "destructive",
+        title: 'Sign Out Failed',
+        description: 'An error occurred while signing out. Please try again.',
+        variant: 'destructive',
         duration: 3000,
       });
     }
@@ -70,56 +63,70 @@ export default function Navbar() {
     handleLogout();
   };
 
+  // Toggle mobile menu with accessibility
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(prev => !prev);
+  };
+
   return (
-    <nav className={`sticky top-0 z-50 bg-gradient-to-r from-[#cdffd8] to-[#94b9ff] border-b border-gray-200 transition-all duration-300 ${isScrolled ? 'shadow-md py-1' : 'shadow-sm py-2'}`}>
+    <nav
+      className={`sticky top-0 z-50 bg-gradient-to-r from-[#cdffd8] to-[#94b9ff] border-b border-gray-200 transition-all duration-300 ${isScrolled ? 'shadow-md py-2' : 'shadow-sm py-3'
+        }`}
+      aria-label="Main navigation"
+    >
       <Toaster />
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center h-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-4 lg:px-4">
+        <div className="flex justify-between items-center h-16 lg:h-12">
           {/* Logo */}
-          <Link
-            href={session ? '/chat' : '/'}
-            className="flex items-center gap-3 flex-shrink-0"
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 relative">
-                <Image
-                  src={zoom}
-                  alt="Zoom Icon"
-                  width={40}
-                  height={40}
-                  className="object-contain"
-                />
-              </div>
-              <div className="w-24 sm:w-32 relative">
-                <Image
-                  src={logo}
-                  alt="Logo"
-                  width={130}
-                  height={40}
-                  className="object-contain"
-                />
-              </div>
+          <Link href={session ? '/chat' : '/'} className="flex items-center gap-2 flex-shrink-0">
+            <div className="w-8 h-8 relative">
+              <Image
+                src={zoom}
+                alt="Zoom Icon"
+                width={32}
+                height={32}
+                className="object-contain"
+                priority
+              />
+            </div>
+            <div className="w-24 sm:w-28 relative">
+              <Image
+                src={logo}
+                alt="Logo"
+                width={112}
+                height={32}
+                className="object-contain"
+                priority
+              />
             </div>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-4">
-            <p className="text-[#262c33] font-semibold text-lg">
-              Ready to start live chat?
+            <p className="text-gray-900 font-medium text-base tracking-tight">
+              Start a live chat
             </p>
 
             {session ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Link href="/chat">
-                  <Button className="bg-gradient-to-r from-[#cdffd8] to-[#94b9ff] text-[#262c33] font-medium border border-gray-300 hover:from-[#94b9ff] hover:to-[#cdffd8] transition-all duration-300 shadow-sm hover:shadow-md" size="sm">
-                    <MailSearch className="w-4 h-4 mr-2" />
+                  <Button
+                    className="bg-gradient-to-r from-blue-50 to-indigo-50 text-gray-800 font-semibold border border-gray-300/60 hover:from-blue-100 hover:to-indigo-100 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md"
+                    size="sm"
+                    aria-label="Go to My Chats"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
                     My Chats
                   </Button>
                 </Link>
 
                 {session.user.role === 'admin' && (
                   <Link href="/admin">
-                    <Button className="bg-gradient-to-r from-[#cdffd8] to-[#94b9ff] text-[#262c33] font-medium border border-gray-300 hover:from-[#94b9ff] hover:to-[#cdffd8] transition-all duration-300 shadow-sm hover:shadow-md" size="sm">
+                    <Button
+                      className="bg-gradient-to-r from-blue-50 to-indigo-50 text-gray-800 font-semibold border border-gray-300/60 hover:from-blue-100 hover:to-indigo-100 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md"
+                      size="sm"
+                      aria-label="Go to Admin Dashboard"
+                    >
                       <Settings className="w-4 h-4 mr-2" />
                       Admin
                     </Button>
@@ -131,77 +138,93 @@ export default function Navbar() {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
-                      className="relative h-10 w-10 rounded-full border border-gray-300 hover:bg-white/80 transition-colors"
+                      className="relative h-9 w-9 rounded-full border border-gray-300 hover:bg-gray-100 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                      aria-label="User profile menu"
                     >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-gradient-to-r from-[#94b9ff] to-[#cdffd8] text-[#262c33] font-medium">
-                          {session.user.name?.charAt(0).toUpperCase()}
+                      <Avatar className="h-7 w-7">
+                        <AvatarFallback className="bg-white text-gray-900 font-medium border border-gray-200">
+                          {session.user.name?.charAt(0).toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
-                    className="w-56 border border-gray-200 shadow-lg rounded-md bg-white/95 backdrop-blur-sm"
+                    className="w-64 border border-gray-200 shadow-lg rounded-lg bg-white p-2"
                     align="end"
                     forceMount
                   >
-                    <div className="flex items-center justify-start gap-2 p-2">
-                      <div className="flex flex-col space-y-1 leading-none">
-                        <p className="font-medium text-[#262c33]">{session.user.name}</p>
+                    <div className="flex items-center gap-3 p-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-gradient-to-r from-[#cdffd8] to-[#94b9ff]  text-gray-900 font-medium border border-gray-200">
+                          {session.user.name?.charAt(0).toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col space-y-1">
+                        <p className="font-medium text-gray-900 truncate">{session.user.name}</p>
                         <p className="text-xs text-gray-500">@{session.user.username}</p>
-                        <p className="w-[200px] truncate text-sm text-gray-500">
-                          {session.user.phone}
-                        </p>
+                        <p className="text-xs text-gray-500 truncate">{session.user.phone}</p>
                       </div>
                     </div>
                     <DropdownMenuSeparator className="bg-gray-200" />
                     <DropdownMenuItem
-                      className="cursor-pointer text-[#262c33] focus:bg-gray-100 focus:text-[#262c33]"
+                      className="cursor-pointer text-gray-900 font-medium hover:bg-gray-100 rounded-md focus:bg-gray-100 focus:text-gray-900 transition-colors"
                       onSelect={handleLogout}
                     >
                       <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
+                      <span>Sign Out</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             ) : (
               <Link href="/login">
-                <Button className="bg-gradient-to-r from-[#94b9ff] to-[#cdffd8] text-[#262c33] font-medium border border-gray-300 hover:from-[#cdffd8] hover:to-[#94b9ff] transition-all duration-300 shadow-sm hover:shadow-md">
+                <Button
+                  className="bg-[#0b5cff] text-white font-medium  hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow"
+                  aria-label="Sign in"
+                >
                   <User className="w-4 h-4 mr-2" />
-                  Login
+                  Sign In
                 </Button>
               </Link>
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
+          {/* Mobile Menu Button */}
+          <div className="md:hidden flex items-center gap-2">
             {session && (
-              <div className="flex items-center mr-3">
-                <Link href="/chat" className="mr-2">
-                  <Button size="sm" className="h-9 w-9 p-0 bg-gradient-to-r from-[#cdffd8] to-[#94b9ff] border border-gray-300">
-                    <MailSearch className="h-4 w-4" />
+              <div className="flex items-center">
+                <Link href="/chat">
+                  <Button
+                    size="icon"
+                    className="h-9 w-9 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                    aria-label="Go to My Chats"
+                  >
+                    <Mail className="h-4 w-4 text-gray-900" />
                   </Button>
                 </Link>
                 {session.user.role === 'admin' && (
-                  <Link href="/admin" className="mr-2">
-                    <Button size="sm" className="h-9 w-9 p-0 bg-gradient-to-r from-[#cdffd8] to-[#94b9ff] border border-gray-300">
-                      <Settings className="h-4 w-4" />
+                  <Link href="/admin" className="ml-2">
+                    <Button
+                      size="icon"
+                      className="h-9 w-9 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                      aria-label="Go to Admin Dashboard"
+                    >
+                      <Settings className="h-4 w-4 text-gray-900" />
                     </Button>
                   </Link>
                 )}
               </div>
             )}
-
             <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-[#262c33] hover:bg-white/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+              onClick={toggleMobileMenu}
+              className="ml-2 inline-flex items-center justify-center p-2 rounded-md text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isMobileMenuOpen}
             >
               {isMobileMenuOpen ? (
-                <X className="block h-6 w-6" />
+                <X className="h-6 w-6" />
               ) : (
-                <Menu className="block h-6 w-6" />
+                <Menu className="h-6 w-6" />
               )}
             </button>
           </div>
@@ -210,45 +233,49 @@ export default function Navbar() {
 
       {/* Mobile Navigation Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-lg">
-          <div className="px-4 pt-2 pb-4 space-y-2">
-            <p className="text-[#262c33] font-semibold text-center py-2">
-              Ready to start live chat?
+        <div className="md:hidden bg-white border-b border-gray-200 shadow-lg animate-slide-down">
+          <div className="px-4 pt-3 pb-4 space-y-3">
+            <p className="text-gray-900 font-medium text-center text-base tracking-tight">
+              Start a live chat
             </p>
 
             {session ? (
-              <div className="pt-2 pb-3 border-t border-gray-200">
-                <div className="flex items-center px-4 py-3">
+              <div className="pt-3 pb-2 border-t border-gray-200">
+                <div className="flex items-center px-3 py-2">
                   <Avatar className="h-10 w-10 mr-3">
-                    <AvatarFallback className="bg-gradient-to-r from-[#94b9ff] to-[#cdffd8] text-[#262c33] font-medium">
-                      {session.user.name?.charAt(0).toUpperCase()}
+                    <AvatarFallback className="bg-white text-gray-900 font-medium border border-gray-200">
+                      {session.user.name?.charAt(0).toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">
-                    <p className="font-medium text-[#262c33]">{session.user.name}</p>
+                    <p className="font-medium text-gray-900 truncate">{session.user.name}</p>
                     <p className="text-sm text-gray-500">@{session.user.username}</p>
+                    <p className="text-sm text-gray-500 truncate">{session.user.phone}</p>
                   </div>
                 </div>
-                <div className="mt-3 space-y-1">
+                <div className="mt-2 space-y-2">
                   <button
                     onClick={handleMobileLogout}
-                    className="block w-full text-left px-4 py-2 text-base font-medium text-[#262c33] hover:bg-gray-100 rounded-md"
+                    className="block w-full text-left px-4 py-2 text-base font-medium text-gray-900 hover:bg-gray-100 rounded-md focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                   >
                     <LogOut className="inline-block h-5 w-5 mr-2 align-middle" />
-                    Log out
+                    Sign Out
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="pt-2 pb-3 border-t border-gray-200">
+              <div className="pt-3 pb-2 border-t border-gray-200">
                 <Link
                   href="/login"
                   className="flex justify-center"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  <Button className="w-full bg-gradient-to-r from-[#94b9ff] to-[#cdffd8] text-[#262c33] font-medium border border-gray-300">
+                  <Button
+                    className="w-full bg-[#0b5cff] text-white font-medium border border-blue-700 hover:bg-blue-700 hover:border-blue-800"
+                    aria-label="Sign in"
+                  >
                     <User className="w-4 h-4 mr-2" />
-                    Login
+                    Sign In
                   </Button>
                 </Link>
               </div>

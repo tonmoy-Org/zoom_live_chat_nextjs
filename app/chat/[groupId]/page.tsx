@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
 import { useSession } from 'next-auth/react';
@@ -6,10 +7,9 @@ import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, Send, Image as ImageIcon, Users, Edit2, Settings, Trash2, Ban, Search, Paperclip, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Send, Image as ImageIcon, Users, CreditCard as Edit2, Settings, Trash2, Ban, Search, Paperclip, MoveVertical as MoreVertical, Bell, BellOff, BellOffIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,6 +19,28 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+
+// Utility function to parse URLs in message content
+const parseMessageContent = (content: string) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = content.split(urlRegex);
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline break-all"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
 
 interface Message {
   _id: string;
@@ -31,11 +53,20 @@ interface Message {
     isBlocked: boolean;
     role: string;
   };
-  messageType: 'text' | 'image';
+  messageType: 'text' | 'image' | 'both';
   imageUrl?: string;
   createdAt: string;
   isEdited?: boolean;
   editedAt?: string;
+}
+
+interface Member {
+  _id: string;
+  name: string;
+  username: string;
+  phone: string;
+  isBlocked: boolean;
+  role: string;
 }
 
 export default function ChatGroup() {
@@ -52,6 +83,8 @@ export default function ChatGroup() {
   const [isSending, setIsSending] = useState(false);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [groupSettings, setGroupSettings] = useState<any>(null);
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
@@ -61,8 +94,14 @@ export default function ChatGroup() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [deletingMessageConfirmation, setDeletingMessageConfirmation] = useState<string | null>(null);
   const [blockUserConfirmation, setBlockUserConfirmation] = useState<{ userId: string; userName: string; isCurrentlyBlocked: boolean } | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
   const { toast, dismiss } = useToast();
 
   useEffect(() => {
@@ -74,11 +113,21 @@ export default function ChatGroup() {
     if (status === 'authenticated') {
       initializeSocket();
       fetchMessages();
+      const savedPreference = localStorage.getItem(`notifications-${groupId}`);
+      if (savedPreference !== null) {
+        setNotificationsEnabled(JSON.parse(savedPreference));
+      }
     }
 
     return () => {
       if (socket) {
         socket.disconnect();
+      }
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      if (editImagePreview) {
+        URL.revokeObjectURL(editImagePreview);
       }
     };
   }, [status, groupId]);
@@ -100,6 +149,10 @@ export default function ChatGroup() {
           }
           return [...prev, message];
         });
+
+        if (notificationsEnabled && message.sender._id !== session?.user?.id) {
+          showMessageNotification(message);
+        }
       });
 
       socketInstance.on('message-edited', (editedMessage: Message) => {
@@ -154,6 +207,58 @@ export default function ChatGroup() {
     }
   };
 
+  const showMessageNotification = (message: Message) => {
+    if (document.hidden) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(`${message.sender.name} @${message.sender.username}`, {
+          body: message.messageType === 'image' ? 'Sent an image' : message.content || 'Sent a message',
+          icon: '/favicon.ico',
+          tag: `message-${message._id}`,
+        });
+      }
+    }
+
+    toast({
+      title: `${message.sender.name} @${message.sender.username}`,
+      description: message.messageType === 'image' ? 'Sent an image' : message.content || 'Sent a message',
+      variant: 'default',
+      action: message.imageUrl ? (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const messageElement = document.querySelector(`[data-message-id="${message._id}"]`);
+            if (messageElement) {
+              messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              messageElement.classList.add('bg-yellow-50', 'border-yellow-200');
+              setTimeout(() => {
+                messageElement.classList.remove('bg-yellow-50', 'border-yellow-200');
+              }, 2000);
+            }
+          }}
+        >
+          View Image
+        </Button>
+      ) : undefined,
+    });
+  };
+
+  const toggleNotifications = () => {
+    const newValue = !notificationsEnabled;
+    setNotificationsEnabled(newValue);
+    localStorage.setItem(`notifications-${groupId}`, JSON.stringify(newValue));
+
+    if (newValue && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    toast({
+      title: newValue ? 'Notifications Enabled' : 'Notifications Disabled',
+      description: newValue ? 'You will receive notifications for new messages.' : 'Notifications are turned off for this group.',
+      variant: 'default',
+    });
+  };
+
   const fetchMessages = async () => {
     try {
       const response = await fetch(`/api/groups/${groupId}/messages`);
@@ -183,10 +288,10 @@ export default function ChatGroup() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !socket) {
+    if (!newMessage.trim() && !selectedFile) {
       toast({
         title: 'Warning',
-        description: 'Message cannot be empty.',
+        description: 'Message or image cannot be empty.',
         variant: 'destructive',
       });
       return;
@@ -196,6 +301,43 @@ export default function ChatGroup() {
     setSendError('');
     const messageContent = newMessage;
     setNewMessage('');
+    let imageUrl: string | undefined = undefined;
+
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('upload_preset', 'ml_default');
+
+      try {
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/ddh86gfrm/image/upload`,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.secure_url) {
+          imageUrl = data.secure_url;
+        } else {
+          throw new Error('Failed to upload image');
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        toast({
+          title: 'Error',
+          description: 'An error occurred while uploading the image.',
+          variant: 'destructive',
+        });
+        setIsSending(false);
+        return;
+      }
+    }
+
+    const content = messageContent.trim() || '';
+    const messageType = imageUrl && content ? 'both' : imageUrl ? 'image' : 'text';
 
     try {
       const response = await fetch(`/api/groups/${groupId}/messages`, {
@@ -204,22 +346,24 @@ export default function ChatGroup() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          content: messageContent,
-          messageType: 'text',
+          content,
+          messageType,
+          imageUrl,
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
         setMessages(prev => [...prev, data.message]);
-        socket.emit('send-message', {
+        socket?.emit('send-message', {
           groupId,
           message: data.message,
         });
-        // toast({
-        //   title: 'Success',
-        //   description: 'Message sent successfully.',
-        // });
+        setPreviewUrl(null);
+        setSelectedFile(null);
+        if (previewUrl) {
+          URL.revokeObjectURL(previewUrl);
+        }
       } else {
         const error = await response.json();
         setSendError(error.message);
@@ -244,7 +388,7 @@ export default function ChatGroup() {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) {
       toast({
@@ -264,78 +408,114 @@ export default function ChatGroup() {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', 'ml_default');
-
-    try {
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/ddh86gfrm/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.secure_url) {
-        const messageResponse = await fetch(`/api/groups/${groupId}/messages`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            content: 'Image',
-            messageType: 'image',
-            imageUrl: data.secure_url,
-          }),
-        });
-
-        if (messageResponse.ok) {
-          const messageData = await messageResponse.json();
-          setMessages(prev => [...prev, messageData.message]);
-          socket?.emit('send-message', {
-            groupId,
-            message: messageData.message,
-          });
-          // toast({
-          //   title: 'Success',
-          //   description: 'Image uploaded and sent successfully.',
-          // });
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Failed to send image message.',
-            variant: 'destructive',
-          });
-        }
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Failed to upload image.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast({
-        title: 'Error',
-        description: 'An error occurred while uploading the image.',
-        variant: 'destructive',
-      });
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
     }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    setSelectedFile(file);
   };
 
-  const handleEditMessage = async () => {
-    if (!editContent.trim() || !editingMessage) {
+  const handleEditFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
       toast({
         title: 'Warning',
-        description: 'Edited message cannot be empty.',
+        description: 'No file selected.',
         variant: 'destructive',
       });
       return;
     }
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Error',
+        description: 'Only image files are allowed.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (editImagePreview) {
+      URL.revokeObjectURL(editImagePreview);
+    }
+    const url = URL.createObjectURL(file);
+    setEditImagePreview(url);
+    setEditImageFile(file);
+  };
+
+  const removePreview = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
+    setSelectedFile(null);
+  };
+
+  const removeEditImagePreview = () => {
+    if (editImagePreview) {
+      URL.revokeObjectURL(editImagePreview);
+    }
+    setEditImagePreview(null);
+    setEditImageFile(null);
+  };
+
+  const replaceImage = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleEditMessage = async () => {
+    if (!editingMessage) {
+      return;
+    }
+
+    if (!editContent.trim() && !editImagePreview) {
+      toast({
+        title: 'Warning',
+        description: 'Edited message must have either text or an image.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSending(true);
+    let imageUrl: string | undefined = editingMessage.imageUrl;
+
+    if (editImageFile) {
+      const formData = new FormData();
+      formData.append('file', editImageFile);
+      formData.append('upload_preset', 'ml_default');
+
+      try {
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/ddh86gfrm/image/upload`,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.secure_url) {
+          imageUrl = data.secure_url;
+        } else {
+          throw new Error('Failed to upload image');
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        toast({
+          title: 'Error',
+          description: 'An error occurred while uploading the image.',
+          variant: 'destructive',
+        });
+        setIsSending(false);
+        return;
+      }
+    }
+
+    const content = editContent.trim() || '';
+    const messageType = imageUrl && content ? 'both' : imageUrl ? 'image' : 'text';
 
     try {
       const response = await fetch(`/api/admin/messages/${editingMessage._id}`, {
@@ -344,7 +524,9 @@ export default function ChatGroup() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          content: editContent,
+          content,
+          imageUrl,
+          messageType,
         }),
       });
 
@@ -359,6 +541,11 @@ export default function ChatGroup() {
         });
         setEditingMessage(null);
         setEditContent('');
+        setEditImageFile(null);
+        setEditImagePreview(null);
+        if (editImagePreview) {
+          URL.revokeObjectURL(editImagePreview);
+        }
         toast({
           title: 'Success',
           description: 'Message edited successfully.',
@@ -377,6 +564,8 @@ export default function ChatGroup() {
         description: 'An error occurred while editing the message.',
         variant: 'destructive',
       });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -438,9 +627,8 @@ export default function ChatGroup() {
             variant="outline"
             size="sm"
             onClick={() => {
-              // Dismiss the toast
               dismiss();
-              setDeletingMessageConfirmation(null)
+              setDeletingMessageConfirmation(null);
             }}
           >
             Cancel
@@ -550,15 +738,14 @@ export default function ChatGroup() {
               setBlockUserConfirmation(null);
             }}
           >
-            Yes, {action}
+            Yes, ${action}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
-              // Dismiss the toast
               dismiss();
-              setDeletingMessageConfirmation(null)
+              setBlockUserConfirmation(null);
             }}
           >
             Cancel
@@ -639,14 +826,14 @@ export default function ChatGroup() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="bg-gray-100 flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100 max-w-7xl mx-auto">
+    <div className="flex flex-col min-h-screen bg-blue-50 max-w-7xl mx-auto w-full">
       <Toaster />
       {/* Header */}
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
@@ -657,18 +844,34 @@ export default function ChatGroup() {
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </Button>
             </Link>
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-blue-600 text-white">
-                <Users className="w-5 h-5" />
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <h1 className="text-lg font-semibold text-gray-900">{group?.name || 'Chat Group'}</h1>
+            <button onClick={() => setShowGroupInfo(true)}>
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-[#0b5cff] text-white">
+                  <Users className="w-5 h-5" />
+                </AvatarFallback>
+              </Avatar>
+            </button>
+            <div className="flex flex-col max-w-[150px] sm:max-w-[200px] md:max-w-[300px]">
+              <h1 className="text-lg font-semibold text-gray-900 truncate">{group?.name || 'Chat Group'}</h1>
               <p className="text-sm text-gray-500">{group?.members?.length || 0} members</p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleNotifications}
+              className="rounded-full hover:bg-gray-100"
+              title={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+            >
+              {notificationsEnabled ? (
+                <Bell className="w-5 h-5 text-blue-600" />
+              ) : (
+                <BellOff className="w-5 h-5 text-gray-400" />
+              )}
+            </Button>
+
             {session?.user?.role === 'admin' && (
               <Button
                 variant="ghost"
@@ -701,10 +904,21 @@ export default function ChatGroup() {
           </div>
         </div>
 
-        {/* Mobile menu dropdown */}
         {showMobileMenu && (
           <div className="absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-lg p-4 sm:hidden">
             <div className="flex flex-col space-y-2">
+              <Button
+                variant="ghost"
+                className="justify-start text-gray-600 hover:bg-gray-100"
+                onClick={toggleNotifications}
+              >
+                {notificationsEnabled ? (
+                  < BellOffIcon className="w-4 h-4 mr-2" />
+                ) : (
+                <Bell className="w-4 h-4 mr-2" />
+              )}
+                {notificationsEnabled ? 'Disable Notifications' : 'Enable Notifications'}
+              </Button>
               {session?.user?.role === 'admin' && (
                 <Button
                   variant="ghost"
@@ -721,6 +935,10 @@ export default function ChatGroup() {
               <Button
                 variant="ghost"
                 className="justify-start text-gray-600 hover:bg-gray-100"
+                onClick={() => {
+                  setShowMembers(true);
+                  setShowMobileMenu(false);
+                }}
               >
                 <Users className="w-4 h-4 mr-2" />
                 View Members
@@ -730,9 +948,8 @@ export default function ChatGroup() {
         )}
       </div>
 
-      {/* Banner */}
       {group?.banner && (
-        <div className="bg-white border-b border-gray-200 p-4 sm:p-6">
+        <div className="bg-white border-b border-gray-200 p-4 sm:p-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
             {group.banner.imageUrl && (
               <Image
@@ -740,17 +957,16 @@ export default function ChatGroup() {
                 height={80}
                 src={group.banner.imageUrl}
                 alt="Group banner"
-                className="w-80 sm:w-96 h-20 lg:h-full object-cover mb-2 sm:mb-0"
+                className="w-full sm:w-96 h-full object-cover rounded-md mb-2 sm:mb-0"
               />
             )}
             {group.banner.text && (
-              <p className="text-lg font-medium text-gray-900">{group.banner.text}</p>
+              <p className="text-sm sm:text-base font-medium text-gray-900 truncate">{group.banner.text}</p>
             )}
           </div>
         </div>
       )}
 
-      {/* Messages Area */}
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full p-4 sm:p-6">
           <div className="space-y-4">
@@ -770,20 +986,20 @@ export default function ChatGroup() {
                 return (
                   <div
                     key={message._id}
+                    data-message-id={message._id}
                     className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-3`}
                   >
                     <div
-                      className={`max-w-[80%] sm:max-w-lg p-3 rounded-xl ${isAdminMessage
+                      className={`max-w-[80%] sm:max-w-md p-3 rounded-xl transition-all duration-300 ${isAdminMessage
                         ? 'border-l-4 border-purple-600 bg-white shadow-sm'
                         : isOwnMessage
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-[#0b5cff] text-white'
                           : 'bg-white text-gray-900 border border-gray-200 shadow-sm'
                         }`}
                     >
-                      {/* Sender info */}
                       {!isOwnMessage && (
                         <p className="text-xs font-medium text-gray-600 mb-1 flex items-center gap-2">
-                          <span>{message?.sender?.name || ''} @{message?.sender?.username || 'zoomUser'}</span>
+                          <span className="truncate">{message?.sender?.name || ''} @{message?.sender?.username || 'zoomUser'}</span>
                           {message?.sender?.isBlocked && (
                             <span className="text-xs text-red-500">(Blocked)</span>
                           )}
@@ -795,18 +1011,17 @@ export default function ChatGroup() {
                         </p>
                       )}
 
-                      {/* Message content */}
-                      {message.messageType === 'image' && message.imageUrl ? (
+                      {message.imageUrl && (
                         <ImageViewer
                           src={message.imageUrl}
                           alt="Shared image"
-                          className="rounded-lg max-w-full h-auto cursor-pointer"
+                          className="rounded-lg max-w-full h-auto cursor-pointer mb-2"
                         />
-                      ) : (
-                        <p className="text-sm break-words">{message.content}</p>
+                      )}
+                      {message.content && (
+                        <p className="text-sm break-words">{parseMessageContent(message.content)}</p>
                       )}
 
-                      {/* Message metadata */}
                       <div
                         className={`flex items-center mt-1 text-xs ${isOwnMessage && !isAdminMessage ? 'text-blue-100' : 'text-gray-500'
                           }`}
@@ -823,23 +1038,21 @@ export default function ChatGroup() {
                         )}
                       </div>
 
-                      {/* Admin Controls */}
                       {session?.user?.role === 'admin' && (
                         <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
-                          {message?.messageType === 'text' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEditingMessage(message);
-                                setEditContent(message?.content || '');
-                              }}
-                              className="p-1 h-auto text-gray-500 hover:text-gray-700 text-xs"
-                            >
-                              <Edit2 className="w-3 h-3 mr-1" />
-                              Edit
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditingMessage(message);
+                              setEditContent(message?.content || '');
+                              setEditImagePreview(message?.imageUrl || null);
+                            }}
+                            className="p-1 h-auto text-gray-500 hover:text-gray-700 text-xs"
+                          >
+                            <Edit2 className="w-3 h-3 mr-1" />
+                            Edit
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -881,75 +1094,169 @@ export default function ChatGroup() {
         </ScrollArea>
       </div>
 
-      {/* Message Input */}
       <div className="sticky bottom-0 bg-white border-t border-gray-200 p-3 sm:p-4">
         {sendError && (
           <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-600">
             {sendError}
           </div>
         )}
-        <form onSubmit={sendMessage} className="flex gap-2 items-center">
+        <form onSubmit={sendMessage} className="flex flex-col gap-2 items-start">
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            onChange={handleImageUpload}
+            onChange={handleFileSelect}
             className="hidden"
           />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => fileInputRef.current?.click()}
-            className="rounded-full h-10 w-10 shrink-0 border-gray-300 hover:bg-gray-100"
-          >
-            <Paperclip className="w-4 h-4 text-gray-600" />
-          </Button>
-          <Input
-            placeholder="Type a message..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            className="flex-1 rounded-full h-10 border-gray-300 focus:ring-2 focus:ring-blue-500"
-          />
-          <Button
-            type="submit"
-            disabled={!newMessage.trim() || isSending}
-            className="rounded-full h-10 w-10 shrink-0 bg-blue-600 hover:bg-blue-700"
-          >
-            {isSending ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </Button>
+          {previewUrl && (
+            <div className="relative w-fit mb-2">
+              <Image
+                width={400}
+                height={400}
+                src={previewUrl}
+                alt="Image preview"
+                className="max-h-40 rounded-lg object-cover"
+              />
+              <div className="absolute top-1 right-1 flex gap-1">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  onClick={removePreview}
+                  className="h-6 w-6 rounded-full"
+                >
+                  X
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={replaceImage}
+                  className="h-6 w-6 rounded-full border-gray-300 hover:bg-gray-100"
+                >
+                  <ImageIcon className="w-4 h-4 text-gray-600" />
+                </Button>
+              </div>
+            </div>
+          )}
+          <div className="flex gap-2 items-center w-full">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded-full h-10 w-10 shrink-0 border-gray-300 hover:bg-gray-100"
+            >
+              <Paperclip className="w-4 h-4 text-gray-600" />
+            </Button>
+            <Textarea
+              placeholder="Type a message..."
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              className="flex-1 min-h-[40px] rounded-xl resize-none"
+            />
+            <Button
+              type="submit"
+              disabled={(!newMessage.trim() && !selectedFile) || isSending}
+              className="rounded-full h-10 w-10 shrink-0 bg-[#0b5cff] hover:bg-blue-700"
+            >
+              {isSending ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
         </form>
       </div>
 
-      {/* Edit Message Dialog */}
-      <Dialog open={!!editingMessage} onOpenChange={() => setEditingMessage(null)}>
+      <Dialog open={!!editingMessage} onOpenChange={() => {
+        setEditingMessage(null);
+        setEditContent('');
+        setEditImageFile(null);
+        setEditImagePreview(null);
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Message</DialogTitle>
-            <DialogDescription>Modify the message content below.</DialogDescription>
+            <DialogDescription>Modify the message content and/or image below.</DialogDescription>
           </DialogHeader>
-          <Textarea
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-            placeholder="Enter message content..."
-            className="min-h-[100px] border-gray-300 focus:ring-2 focus:ring-blue-500"
-          />
+          <div className="space-y-4">
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              placeholder="Enter message content..."
+              className="min-h-[100px]"
+            />
+            <div className="space-y-2">
+              {editImagePreview && (
+                <div className="relative w-fit">
+                  <Image
+                    width={300}
+                    height={300}
+                    src={editImagePreview}
+                    alt="Image preview"
+                    className="max-h-40 rounded-lg object-cover"
+                  />
+                  <div className="absolute top-1 right-1 flex gap-1">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      onClick={removeEditImagePreview}
+                      className="h-6 w-6 rounded-full"
+                    >
+                      X
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => editFileInputRef.current?.click()}
+                      className="h-6 w-6 rounded-full border-gray-300 hover:bg-gray-100"
+                    >
+                      <ImageIcon className="w-4 h-4 text-gray-600" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <input
+                ref={editFileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleEditFileSelect}
+                className="hidden"
+              />
+              {!editImagePreview && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => editFileInputRef.current?.click()}
+                  className="w-full"
+                >
+                  <ImageIcon className="w-4 h-4 mr-2" />
+                  {editingMessage?.imageUrl ? 'Replace Image' : 'Upload Image'}
+                </Button>
+              )}
+            </div>
+          </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
-              onClick={() => setEditingMessage(null)}
+              onClick={() => {
+                setEditingMessage(null);
+                setEditContent('');
+                setEditImageFile(null);
+                setEditImagePreview(null);
+              }}
               className="flex-1 border-gray-300 hover:bg-gray-100"
             >
               Cancel
             </Button>
             <Button
               onClick={handleEditMessage}
-              disabled={!editContent.trim()}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              disabled={!editContent.trim() && !editImagePreview}
+              className="flex-1 bg-[#0b5cff] hover:bg-blue-700"
             >
               Save Changes
             </Button>
@@ -957,7 +1264,138 @@ export default function ChatGroup() {
         </DialogContent>
       </Dialog>
 
-      {/* Group Settings Dialog */}
+      <Dialog open={showGroupInfo} onOpenChange={setShowGroupInfo}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Group Information</DialogTitle>
+            <DialogDescription>Details about this group</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <Avatar className="h-12 w-12">
+                <AvatarFallback className="bg-[#0b5cff] text-white">
+                  <Users className="w-6 h-6" />
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">{group?.name || 'Chat Group'}</h3>
+                <p className="text-sm text-gray-500">{group?.members?.length || 0} members</p>
+              </div>
+            </div>
+            {group?.description && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700">Description</h4>
+                <p className="text-sm text-gray-500">{group.description}</p>
+              </div>
+            )}
+            {group?.banner?.text && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700">Banner Text</h4>
+                <p className="text-sm text-gray-500">{group.banner.text}</p>
+              </div>
+            )}
+            {group?.banner?.imageUrl && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700">Banner Image</h4>
+                <Image
+                  width={300}
+                  height={60}
+                  src={group.banner.imageUrl}
+                  alt="Group banner"
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowGroupInfo(false)}
+              className="bg-[#0b5cff] hover:bg-blue-700"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showMembers} onOpenChange={setShowMembers}>
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Group Members</DialogTitle>
+            <DialogDescription>List of members in this group</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="relative mb-2">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search members..."
+                value={userSearchTerm}
+                onChange={(e) => setUserSearchTerm(e.target.value)}
+                className="pl-10 border-gray-300 focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            {group?.members
+              ?.filter((member: Member) =>
+                member.name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                member.phone?.includes(userSearchTerm) ||
+                member.username?.toLowerCase().includes(userSearchTerm.toLowerCase())
+              )
+              .map((member: Member) => (
+                <div
+                  key={member._id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-gray-200 text-gray-700">
+                        {member.name?.[0]?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-700 truncate">
+                        {member.name} @{member.username}
+                        {member.isBlocked && (
+                          <span className="ml-2 text-xs text-red-500">(Blocked)</span>
+                        )}
+                        {member.role === 'admin' && (
+                          <span className="ml-2 text-xs font-medium text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
+                            Admin
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">{member.phone}</p>
+                    </div>
+                  </div>
+                  {session?.user?.role === 'admin' && member._id !== session?.user?.id && (
+                    <Button
+                      variant={member.isBlocked ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() =>
+                        promptBlockUser(member._id, member.name || '', member.isBlocked || false)
+                      }
+                      disabled={blockingUserId === member._id || !!blockUserConfirmation}
+                      className={`text-xs ${member.isBlocked
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'text-orange-600 hover:text-orange-700 border-orange-300'
+                        }`}
+                    >
+                      {member.isBlocked ? 'Unblock' : 'Block'}
+                    </Button>
+                  )}
+                </div>
+              ))}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowMembers(false)}
+              className="bg-[#0b5cff] hover:bg-blue-700"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {session?.user?.role === 'admin' && (
         <Dialog open={showSettings} onOpenChange={setShowSettings}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -968,6 +1406,32 @@ export default function ChatGroup() {
 
             {groupSettings && (
               <div className="space-y-6 py-4">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-gray-900">Notification Settings</h3>
+                  <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                    <Checkbox
+                      id="notifications-enabled"
+                      checked={notificationsEnabled}
+                      onCheckedChange={toggleNotifications}
+                    />
+                    <label htmlFor="notifications-enabled" className="text-sm font-medium text-gray-700 flex-1">
+                      Enable message notifications
+                    </label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if ('Notification' in window && Notification.permission !== 'granted') {
+                          Notification.requestPermission();
+                        }
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-700"
+                    >
+                      Manage Permissions
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -988,7 +1452,7 @@ export default function ChatGroup() {
                       value={groupSettings.messagingMode}
                       onValueChange={(value) => updateGroupSettings({ messagingMode: value })}
                     >
-                      <SelectTrigger className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
+                      <SelectTrigger className="w-full border-gray-300 focus:ring-1 focus:ring-blue-500">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1010,7 +1474,7 @@ export default function ChatGroup() {
                           placeholder="Search users..."
                           value={userSearchTerm}
                           onChange={(e) => setUserSearchTerm(e.target.value)}
-                          className="pl-10 border-gray-300 focus:ring-2 focus:ring-blue-500"
+                          className="pl-10"
                         />
                       </div>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -1089,7 +1553,7 @@ export default function ChatGroup() {
             <DialogFooter>
               <Button
                 onClick={() => setShowSettings(false)}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-[#0b5cff] hover:bg-blue-700"
               >
                 Close
               </Button>

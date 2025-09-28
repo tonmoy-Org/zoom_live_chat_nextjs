@@ -21,7 +21,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AuthSessionProvider>
-          <div className="min-h-screen flex flex-col">
+          <div className="min-h-screen flex flex-col bg-gray-50">
             <Navbar />
             <main className="flex-1">
               {children}

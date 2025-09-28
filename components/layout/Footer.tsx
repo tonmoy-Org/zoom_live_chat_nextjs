@@ -6,7 +6,7 @@ import Image from 'next/image';
 export default function Footer() {
   return (
     <footer className="bg-[#000C3B] py-4 sm:py-6 border-t border-gray-700">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-0">
         <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-between sm:items-center text-[10px] text-gray-300 gap-4 sm:gap-3">
           {/* Copyright */}
           <span className="lg:text-center sm:text-left order-2 sm:order-1">

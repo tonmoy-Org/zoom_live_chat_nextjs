@@ -122,7 +122,7 @@ export default function GroupInvite() {
       <Toaster />
       <Card className="w-full max-w-[90%] sm:max-w-md border-0 shadow-sm">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+          <div className="mx-auto w-10 h-10 bg-[#0b5cff] rounded-full flex items-center justify-center">
             <MessageCircle className="w-5 h-5 text-white" />
           </div>
           <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -147,7 +147,7 @@ export default function GroupInvite() {
               </div>
               <Button
                 onClick={() => setShowJoinDialog(true)}
-                className="w-full h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors duration-200"
+                className="w-full h-10 rounded-full bg-[#0b5cff] hover:bg-blue-700 text-white font-medium transition-colors duration-200"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
                 Join Group
@@ -169,7 +169,7 @@ export default function GroupInvite() {
             <Button
               onClick={handleJoinGroup}
               disabled={isJoining}
-              className="w-full max-w-[200px] mx-auto h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors duration-200"
+              className="w-full max-w-[200px] mx-auto h-10 rounded-full bg-[#0b5cff] hover:bg-blue-700 text-white font-medium transition-colors duration-200"
             >
               {isJoining ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>

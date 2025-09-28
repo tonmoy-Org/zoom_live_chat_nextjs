@@ -32,7 +32,7 @@ export default function AiWorkPlatform() {
                     </p>
                     <Button
                         asChild
-                        className="mt-6 sm:mt-8 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-full font-medium text-white transition-colors duration-200"
+                        className="mt-6 sm:mt-8 px-6 py-2.5 bg-[#0b5cff] hover:bg-blue-700 rounded-full font-medium text-white transition-colors duration-200"
                     >
                         <a href="#">Discover the possibilities</a>
                     </Button>

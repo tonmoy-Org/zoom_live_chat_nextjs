@@ -116,7 +116,7 @@ export default function CustomFooter() {
                             <a
                                 key={idx}
                                 href="#"
-                                className="bg-[#1E1F33] p-2 rounded-full hover:bg-blue-600 transition-colors duration-200"
+                                className="bg-[#1E1F33] p-2 rounded-full hover:bg-[#0b5cff] transition-colors duration-200"
                             >
                                 <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300 hover:text-white" />
                             </a>

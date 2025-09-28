@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
 import { useSession } from 'next-auth/react';
@@ -5,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -30,7 +31,7 @@ import {
   Users,
   UserPlus,
   Shield,
-  MessageCircle,
+  MessageSquare,
   Plus,
   Ban,
   Trash2,
@@ -44,13 +45,13 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Link as LinkIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
-
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -62,6 +63,7 @@ export default function AdminDashboard() {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDescription, setNewGroupDescription] = useState('');
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<any>(null);
   const [editGroupName, setEditGroupName] = useState('');
   const [editGroupDescription, setEditGroupDescription] = useState('');
@@ -81,13 +83,6 @@ export default function AdminDashboard() {
   const [endDate, setEndDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
-  const [pendingAction, setPendingAction] = useState<{
-    type: string;
-    userId?: string;
-    groupId?: string;
-    userName?: string;
-    groupName?: string;
-  } | null>(null);
 
   useEffect(() => {
     const filtered = users.filter((user: any) => {
@@ -169,20 +164,18 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUserAction = async (userId: string, action: 'block' | 'unblock' | 'delete' | 'make_admin' | 'make_user') => {
-    if (action === 'delete') {
-      setPendingAction({ type: 'delete_user', userId });
-      toast({
-        title: 'Confirm Deletion',
-        description: 'Are you sure you want to delete this user?',
-        action: (
-          <div className="flex gap-2">
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={async () => {
-                setPendingAction(null);
-                try {
+  const handleUserAction = async (userId: string, action: 'block' | 'unblock' | 'delete' | 'make_admin' | 'make_user', userName?: string) => {
+    try {
+      if (action === 'delete') {
+        toast({
+          title: 'Confirm User Deletion',
+          description: `Are you sure you want to permanently delete ${userName || 'this user'}? This action cannot be undone.`,
+          action: (
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={async () => {
                   await fetch('/api/admin/users', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
@@ -191,38 +184,53 @@ export default function AdminDashboard() {
                   fetchUsers();
                   toast({
                     title: 'Success',
-                    description: 'User deleted successfully.',
+                    description: `${userName || 'User'} deleted successfully.`,
                   });
-                } catch (error) {
-                  console.error('Error deleting user:', error);
+                }}
+              >
+                Delete
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => dismiss()}>
+                Cancel
+              </Button>
+            </div>
+          ),
+        });
+        return;
+      } else if (action === 'block' || action === 'unblock') {
+        const isBlock = action === 'block';
+        toast({
+          title: `Confirm User ${isBlock ? 'Block' : 'Unblock'}`,
+          description: `Are you sure you want to ${isBlock ? 'block' : 'unblock'} ${userName || 'this user'}?`,
+          action: (
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={async () => {
+                  await fetch('/api/admin/users', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, action }),
+                  });
+                  fetchUsers();
                   toast({
-                    variant: 'destructive',
-                    title: 'Error',
-                    description: 'Failed to delete user.',
+                    title: 'Success',
+                    description: `${userName || 'User'} ${isBlock ? 'blocked' : 'unblocked'} successfully.`,
                   });
-                }
-              }}
-            >
-              Delete
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                // Dismiss the toast
-                dismiss();
-                setPendingAction(null);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        ),
-      });
-      return;
-    }
+                }}
+              >
+                {isBlock ? 'Block' : 'Unblock'}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => dismiss()}>
+                Cancel
+              </Button>
+            </div>
+          ),
+        });
+        return;
+      }
 
-    try {
       await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -231,7 +239,7 @@ export default function AdminDashboard() {
       fetchUsers();
       toast({
         title: 'Success',
-        description: `User ${action === 'block' ? 'blocked' : action === 'unblock' ? 'unblocked' : 'role updated'} successfully.`,
+        description: 'User role updated successfully.',
       });
     } catch (error) {
       console.error('Error updating user:', error);
@@ -272,6 +280,7 @@ export default function AdminDashboard() {
           title: 'Success',
           description: 'Group created successfully.',
         });
+        setIsCreateGroupOpen(false);
       } else {
         toast({
           variant: 'destructive',
@@ -347,17 +356,15 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteGroup = async (groupId: string, groupName: string) => {
-    setPendingAction({ type: 'delete_group', groupId, groupName });
     toast({
-      title: 'Confirm Deletion',
-      description: `Are you sure you want to delete "${groupName}"? This will delete all messages and remove all members.`,
+      title: 'Confirm Group Deletion',
+      description: `Are you sure you want to delete "${groupName}"? This will permanently remove all messages and members.`,
       action: (
         <div className="flex gap-2">
           <Button
             size="sm"
             variant="destructive"
             onClick={async () => {
-              setPendingAction(null);
               try {
                 const response = await fetch(`/api/admin/groups/${groupId}`, {
                   method: 'DELETE',
@@ -388,15 +395,7 @@ export default function AdminDashboard() {
           >
             Delete
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              // Dismiss the toast
-              dismiss();
-              setPendingAction(null);
-            }}
-          >
+          <Button size="sm" variant="outline" onClick={() => dismiss()}>
             Cancel
           </Button>
         </div>
@@ -405,9 +404,8 @@ export default function AdminDashboard() {
   };
 
   const handleResetChat = async (groupId: string, groupName: string) => {
-    setPendingAction({ type: 'reset_chat', groupId, groupName });
     toast({
-      title: 'Confirm Reset',
+      title: 'Confirm Chat Reset',
       description: `Are you sure you want to reset all messages in "${groupName}"? This action cannot be undone.`,
       action: (
         <div className="flex gap-2">
@@ -415,7 +413,6 @@ export default function AdminDashboard() {
             size="sm"
             variant="destructive"
             onClick={async () => {
-              setPendingAction(null);
               setResettingChatId(groupId);
               try {
                 const response = await fetch(`/api/admin/groups/${groupId}/reset`, {
@@ -448,15 +445,7 @@ export default function AdminDashboard() {
           >
             Reset
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              // Dismiss the toast
-              dismiss();
-              setPendingAction(null);
-            }}
-          >
+          <Button size="sm" variant="outline" onClick={() => dismiss()}>
             Cancel
           </Button>
         </div>
@@ -562,9 +551,8 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteBanner = async (groupId: string) => {
-    setPendingAction({ type: 'delete_banner', groupId });
     toast({
-      title: 'Confirm Deletion',
+      title: 'Confirm Banner Removal',
       description: 'Are you sure you want to remove this banner?',
       action: (
         <div className="flex gap-2">
@@ -572,7 +560,6 @@ export default function AdminDashboard() {
             size="sm"
             variant="destructive"
             onClick={async () => {
-              setPendingAction(null);
               try {
                 const response = await fetch(`/api/admin/groups/${groupId}/banner`, {
                   method: 'DELETE',
@@ -603,15 +590,7 @@ export default function AdminDashboard() {
           >
             Remove
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              // Dismiss the toast
-              dismiss();
-              setPendingAction(null);
-            }}
-          >
+          <Button size="sm" variant="outline" onClick={() => dismiss()}>
             Cancel
           </Button>
         </div>
@@ -620,16 +599,14 @@ export default function AdminDashboard() {
   };
 
   const handleRemoveUser = async (groupId: string, userId: string, userName: string) => {
-    setPendingAction({ type: 'remove_user', groupId, userId, userName });
     toast({
-      title: 'Confirm Removal',
+      title: 'Confirm Member Removal',
       description: `Are you sure you want to remove ${userName} from this group?`,
       action: (
         <div className="flex gap-2">
           <Button
             size="sm"
             onClick={async () => {
-              setPendingAction(null);
               setRemovingMemberId(userId);
               try {
                 const response = await fetch(`/api/admin/groups/${groupId}/members`, {
@@ -667,17 +644,9 @@ export default function AdminDashboard() {
               }
             }}
           >
-            Confirm
+            Remove
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              // Dismiss the toast
-              dismiss();
-              setPendingAction(null);
-            }}
-          >
+          <Button size="sm" variant="outline" onClick={() => dismiss()}>
             Cancel
           </Button>
         </div>
@@ -690,7 +659,7 @@ export default function AdminDashboard() {
     navigator.clipboard.writeText(link);
     toast({
       title: 'Success',
-      description: 'Invite link copied to clipboard!',
+      description: 'Invite link copied to clipboard.',
     });
   };
 
@@ -700,7 +669,7 @@ export default function AdminDashboard() {
       Username: user.username,
       Phone: user.phone,
       Role: user.role,
-      Blocked: user.isBlocked ? 'Yes' : 'No',
+      Status: user.isBlocked ? 'Blocked' : 'Active',
       'Joined Groups': user.joinedGroups?.map((g: any) => g.groupName).join(', ') || 'None',
       'Created At': user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A',
     }));
@@ -727,64 +696,77 @@ export default function AdminDashboard() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="bg-gray-50 flex items-center justify-center py-20 min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="bg-gray-100 flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-full bg-gray-50">
+    <div>
       <Toaster />
-      <div className="max-w-7xl mx-auto lg:p-6 p-4">
-        <div className="mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
-              <p className="text-gray-600">Manage users and groups</p>
+              <h1 className="text-2xl font-semibold text-gray-900">Admin Dashboard</h1>
+              <p className="text-sm text-gray-600">Manage users, groups, and banners</p>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={() => router.push('/chat')} variant="outline" size="sm" className="text-sm">
-                Back to Chat
-              </Button>
-            </div>
+            <Button
+              onClick={() => router.push('/chat')}
+              variant="outline"
+              className="border-gray-300 hover:bg-gray-50"
+              size="sm"
+            >
+              Back to Chat
+            </Button>
           </div>
         </div>
 
-        <Tabs defaultValue="users" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="users" className="flex items-center gap-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 bg-white border border-gray-200 rounded-lg">
+            <TabsTrigger
+              value="users"
+              className="flex items-center gap-2 text-gray-900 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#cdffd8] data-[state=active]:to-[#94b9ff]"
+            >
               <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Users</span>
+              <span>Users</span>
             </TabsTrigger>
-            <TabsTrigger value="groups" className="flex items-center gap-2">
-              <MessageCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Groups</span>
+            <TabsTrigger
+              value="groups"
+              className="flex items-center gap-2 text-gray-900 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#cdffd8] data-[state=active]:to-[#94b9ff]"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>Groups</span>
             </TabsTrigger>
-            <TabsTrigger value="banners" className="flex items-center gap-2">
+            <TabsTrigger
+              value="banners"
+              className="flex items-center gap-2 text-gray-900 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#cdffd8] data-[state=active]:to-[#94b9ff]"
+            >
               <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Banners</span>
+              <span>Banners</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="space-y-6">
-            <Card>
+            <Card className="border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                   <Users className="w-5 h-5" />
                   User Management
                 </CardTitle>
-                <CardDescription>View and manage all registered users</CardDescription>
+                <p className="text-sm text-gray-600">View and manage all registered users</p>
               </CardHeader>
               <CardContent>
                 <div className="mb-4">
                   <div className="relative">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
                     <Input
-                      placeholder="Search by name, username, or phone..."
+                      placeholder="Search by name, username, or phone"
                       value={userSearchTerm}
                       onChange={(e) => setUserSearchTerm(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 border-gray-300"
+                      aria-label="Search users"
                     />
                   </div>
                 </div>
@@ -794,7 +776,9 @@ export default function AdminDashboard() {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowFilters(!showFilters)}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 border-gray-300 hover:bg-gray-50"
+                    aria-expanded={showFilters}
+                    aria-controls="filter-panel"
                   >
                     <Filter className="w-4 h-4" />
                     Filters
@@ -802,82 +786,102 @@ export default function AdminDashboard() {
                   </Button>
 
                   {showFilters && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-4">
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1">
-                          <Label>Start Date</Label>
+                    <div
+                      id="filter-panel"
+                      className="mt-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm animate-slide-down"
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="startDate">Start Date</Label>
                           <Input
+                            id="startDate"
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
+                            className="border-gray-300"
                           />
                         </div>
-                        <div className="flex-1">
-                          <Label>End Date</Label>
+                        <div>
+                          <Label htmlFor="endDate">End Date</Label>
                           <Input
+                            id="endDate"
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
+                            className="border-gray-300"
                           />
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button onClick={clearFilters} variant="outline" size="sm">
-                          <X className="w-4 h-4 mr-1" />
-                          Clear Filters
-                        </Button>
-                      </div>
+                      <Button
+                        onClick={clearFilters}
+                        variant="outline"
+                        size="sm"
+                        className="mt-4 border-gray-300 hover:bg-gray-50"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Clear Filters
+                      </Button>
                     </div>
                   )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-                  <Button onClick={handleExportToExcel} size="sm" className="flex items-center gap-2">
-                    <Download className="w-4 h-4" />
+                  <Button
+                    onClick={handleExportToExcel}
+                    size="sm"
+                    className="bg-[#0b5cff] text-white hover:bg-blue-700"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
                     Export to Excel
                   </Button>
-                  <div className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-600">
                     Showing {filteredUsers.length} of {users.length} users
-                  </div>
+                  </p>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {filteredUsers.length === 0 ? (
                     <div className="text-center py-12">
                       <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">No users found</p>
-                      <p className="text-sm text-gray-400">Try adjusting your search or filters</p>
+                      <p className="text-gray-600 font-medium">No users found</p>
+                      <p className="text-sm text-gray-500">Try adjusting your search or filters</p>
                     </div>
                   ) : (
                     filteredUsers.map((user: any) => (
                       <div
                         key={user?._id}
-                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white rounded-lg border shadow-sm"
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
                       >
                         <div className="flex items-start gap-4 mb-4 sm:mb-0">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="font-medium text-blue-600">
+                          <div className="w-10 h-10 bg-gradient-to-r from-[#cdffd8] to-[#94b9ff] rounded-full flex items-center justify-center">
+                            <span className="font-medium text-gray-900">
                               {user?.username?.charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <div>
-                            <h3 className="font-medium text-gray-900">
-                              {user.name} <span className="text-sm uppercase text-gray-500">({user.role})</span>
+                            <h3 className="font-semibold text-gray-900">
+                              {user.name}{' '}
+                              <span className="text-xs uppercase text-gray-500">({user.role})</span>
                             </h3>
-                            <p className="text-sm text-gray-500">@{user.username}</p>
-                            <p className="text-xs text-gray-400">{user.phone}</p>
-                            <p className="text-xs text-gray-400">
-                              Joined: {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                            <p className="text-sm text-gray-600">@{user.username}</p>
+                            <p className="text-sm text-gray-600">{user.phone}</p>
+                            <p className="text-sm text-gray-500">
+                              Joined:{' '}
+                              {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                             </p>
-                            {user?.joinedGroups && user?.joinedGroups.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
+                            {user?.joinedGroups?.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
                                 {user.joinedGroups.slice(0, 2).map((group: any) => (
-                                  <Badge key={group?.groupId?._id} variant="outline" className="text-xs">
+                                  <Badge
+                                    key={group?.groupId?._id}
+                                    variant="secondary"
+                                    className="text-xs bg-gray-100"
+                                  >
                                     {group.groupName}
                                   </Badge>
                                 ))}
                                 {user.joinedGroups.length > 2 && (
-                                  <Badge variant="outline" className="text-xs">
+                                  <Badge variant="secondary" className="text-xs bg-gray-100">
                                     +{user.joinedGroups.length - 2} more
                                   </Badge>
                                 )}
@@ -892,7 +896,8 @@ export default function AdminDashboard() {
                               handleUserAction(user._id, newRole === 'admin' ? 'make_admin' : 'make_user')
                             }
                           >
-                            <SelectTrigger className="w-full sm:w-24">
+
+                            <SelectTrigger className="w-full border-gray-300 focus:ring-1 focus:ring-blue-500">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -909,20 +914,22 @@ export default function AdminDashboard() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleUserAction(user._id, user.isBlocked ? 'unblock' : 'block')}
-                              className={user.isBlocked ? 'text-green-600' : 'text-red-600'}
+                              onClick={() => handleUserAction(user._id, user.isBlocked ? 'unblock' : 'block', user.name)}
+                              className={user.isBlocked ? 'text-green-600 hover:text-green-700' : 'text-red-600 hover:text-red-700'}
+                              aria-label={user.isBlocked ? 'Unblock user' : 'Block user'}
                             >
-                              <Ban className="w-3 h-3" />
-                              <span className="hidden sm:inline ml-1">{user.isBlocked ? 'Unblock' : 'Block'}</span>
+                              <Ban className="w-4 h-4 mr-2" />
+                              {user.isBlocked ? 'Unblock' : 'Block'}
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleUserAction(user._id, 'delete')}
-                              className="text-red-600"
+                              onClick={() => handleUserAction(user._id, 'delete', user.name)}
+                              className="text-red-600 hover:text-red-700"
+                              aria-label="Delete user"
                             >
-                              <Trash2 className="w-3 h-3" />
-                              <span className="hidden sm:inline ml-1">Delete</span>
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
                             </Button>
                           </div>
                         </div>
@@ -935,22 +942,21 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="groups" className="space-y-6">
-            <Card>
+            <Card className="border-gray-200 shadow-sm">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageCircle className="w-5 h-5" />
+                    <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                      <MessageSquare className="w-5 h-5" />
                       Group Management
                     </CardTitle>
-                    <CardDescription>Create and manage chat groups</CardDescription>
+                    <p className="text-sm text-gray-600">Create and manage chat groups</p>
                   </div>
-                  <Dialog>
+                  <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
                     <DialogTrigger asChild>
-                      <Button className="bg-blue-500 hover:bg-blue-600">
+                      <Button className="bg-[#0b5cff] hover:bg-blue-700 text-white">
                         <Plus className="w-4 h-4 mr-2" />
-                        <span className="hidden sm:inline">Create Group</span>
-                        <span className="sm:hidden">Create</span>
+                        Create Group
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
@@ -966,6 +972,8 @@ export default function AdminDashboard() {
                             value={newGroupName}
                             onChange={(e) => setNewGroupName(e.target.value)}
                             placeholder="Enter group name"
+                            className="border-gray-300"
+                            aria-required="true"
                           />
                         </div>
                         <div>
@@ -974,7 +982,8 @@ export default function AdminDashboard() {
                             id="groupDescription"
                             value={newGroupDescription}
                             onChange={(e) => setNewGroupDescription(e.target.value)}
-                            placeholder="Enter group description"
+                            placeholder="Enter group description (optional)"
+                            className="border-gray-300"
                           />
                         </div>
                       </div>
@@ -982,7 +991,7 @@ export default function AdminDashboard() {
                         <Button
                           onClick={handleCreateGroup}
                           disabled={isCreatingGroup || !newGroupName.trim()}
-                          className="w-full"
+                          className="bg-[#0b5cff] hover:bg-blue-700"
                         >
                           {isCreatingGroup ? 'Creating...' : 'Create Group'}
                         </Button>
@@ -992,56 +1001,76 @@ export default function AdminDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {groups.length === 0 ? (
                     <div className="text-center py-12">
-                      <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">No groups created yet</p>
-                      <p className="text-sm text-gray-400">Create your first group to get started</p>
+                      <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-600 font-medium">No groups created yet</p>
+                      <p className="text-sm text-gray-500">Create your first group to get started</p>
                     </div>
                   ) : (
                     groups.map((group: any) => (
                       <div
                         key={group._id}
-                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white rounded-lg border shadow-sm"
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
                       >
                         <div className="flex-1 mb-4 sm:mb-0">
-                          <h3 className="font-medium text-gray-900">{group.name}</h3>
-                          <p className="text-sm text-gray-500">{group.description}</p>
-                          <p className="text-xs text-gray-400 mt-1 break-all">
-                            Invite Link: https://zoomchat.cloud/invite/{group.inviteCode}
-                          </p>
+                          <h3 className="font-semibold text-gray-900">{group?.name}</h3>
+                          <p className="text-sm text-gray-600 max-w-xl truncate">{group?.description || 'No description'}</p>
+                          <div className="flex items-center text-sm mt-1">
+                            <LinkIcon className="w-4 h-4 mr-2 text-[#0b5cff]" />
+                            <a
+                              href={`https://zoomchat.cloud/invite/${group?.inviteCode}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#0b5cff] hover:underline break-all"
+                            >
+                              https://zoomchat.cloud/invite/{group?.inviteCode}
+                            </a>
+                          </div>
                           <div className="flex flex-wrap items-center gap-2 mt-2">
                             <Badge
-                              variant="outline"
-                              className="cursor-pointer hover:bg-gray-50"
+                              variant="secondary"
+                              className="cursor-pointer bg-gray-100 hover:bg-gray-200"
                               onClick={() => setMembersModal(group)}
                             >
-                              {group.members?.length || 0} members
+                              {group?.members?.length || 0} members
                             </Badge>
-                            {group.banner?.imageUrl && <Badge variant="secondary">Has Banner</Badge>}
+                            {group?.banner?.imageUrl && (
+                              <Badge variant="secondary" className="bg-gray-100">
+                                Has Banner
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => copyInviteLink(group.inviteCode)}
-                            className="flex-1 sm:flex-none"
+                            onClick={() => copyInviteLink(group?.inviteCode)}
+                            className="flex-1 sm:flex-none border-gray-300 hover:bg-gray-50"
+                            aria-label="Copy invite link"
                           >
+                            <LinkIcon className="w-4 h-4 mr-2" />
                             Copy Link
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleEditGroup(group)}
-                            className="flex-1 sm:flex-none"
+                            className="flex-1 sm:flex-none border-gray-300 hover:bg-gray-50"
+                            aria-label="Edit group"
                           >
-                            <Edit2 className="w-3 h-3 sm:mr-1" />
-                            <span className="hidden sm:inline">Edit</span>
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Edit
                           </Button>
-                          <Link href={`/chat/${group._id}`} className="flex-1 sm:flex-none">
-                            <Button size="sm" variant="outline" className="w-full">
+                          <Link href={`/chat/${group?._id}`} className="flex-1 sm:flex-none">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full border-gray-300 hover:bg-gray-50"
+                              aria-label="View group"
+                            >
                               View
                             </Button>
                           </Link>
@@ -1050,19 +1079,21 @@ export default function AdminDashboard() {
                             variant="outline"
                             onClick={() => handleResetChat(group._id, group.name)}
                             disabled={resettingChatId === group._id}
-                            className="text-orange-600 hover:text-orange-700 flex-1 sm:flex-none"
+                            className="flex-1 sm:flex-none text-orange-600 hover:text-orange-700 border-gray-300 hover:bg-gray-50"
+                            aria-label="Reset chat history"
                           >
-                            <RotateCcw className="w-3 h-3 sm:mr-1" />
-                            <span className="hidden sm:inline">{resettingChatId === group._id ? 'Resetting...' : 'Reset'}</span>
+                            <RotateCcw className="w-4 h-4 mr-2" />
+                            {resettingChatId === group._id ? 'Resetting...' : 'Reset'}
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleDeleteGroup(group._id, group.name)}
-                            className="text-red-600 hover:text-red-700 flex-1 sm:flex-none"
+                            className="flex-1 sm:flex-none text-red-600 hover:text-red-700 border-gray-300 hover:bg-gray-50"
+                            aria-label="Delete group"
                           >
-                            <Trash2 className="w-3 h-3 sm:mr-1" />
-                            <span className="hidden sm:inline">Delete</span>
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
                           </Button>
                         </div>
                       </div>
@@ -1074,34 +1105,38 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="banners" className="space-y-6">
-            <Card>
+            <Card className="border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                   <Settings className="w-5 h-5" />
                   Group Banners
                 </CardTitle>
-                <CardDescription>Manage group banners and headers</CardDescription>
+                <p className="text-sm text-gray-600">Manage banners for chat groups</p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {groups.length === 0 ? (
                     <div className="text-center py-12">
-                      <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">No groups available</p>
+                      <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-600 font-medium">No groups available</p>
+                      <p className="text-sm text-gray-500">Create a group to add banners</p>
                     </div>
                   ) : (
                     groups.map((group: any) => (
-                      <div key={group._id} className="p-4 bg-white rounded-lg border shadow-sm">
+                      <div
+                        key={group._id}
+                        className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                      >
                         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                           <div className="flex-1">
-                            <h3 className="font-medium text-gray-900 mb-2">{group.name}</h3>
-                            {group.banner?.imageUrl && (
+                            <h3 className="font-semibold text-gray-900 mb-2">{group.name}</h3>
+                            {group.banner?.imageUrl ? (
                               <div className="mb-4">
-                                <div className="relative w-full max-w-md h-32 border rounded-lg overflow-hidden">
+                                <div className="relative w-full max-w-md h-32 border border-gray-200 rounded-lg overflow-hidden">
                                   <Image
                                     fill
                                     src={group.banner.imageUrl}
-                                    alt="Group banner"
+                                    alt={`Banner for ${group.name}`}
                                     className="object-cover"
                                   />
                                 </div>
@@ -1111,8 +1146,9 @@ export default function AdminDashboard() {
                                   </p>
                                 )}
                               </div>
+                            ) : (
+                              <p className="text-sm text-gray-600 mb-4">No banner set</p>
                             )}
-                            {!group.banner?.imageUrl && <p className="text-sm text-gray-500 mb-4">No banner set</p>}
                           </div>
                           <div className="flex gap-2">
                             <Button
@@ -1123,8 +1159,10 @@ export default function AdminDashboard() {
                                 setBannerText(group.banner?.text || '');
                                 setBannerImageUrl(group.banner?.imageUrl || '');
                               }}
+                              className="border-gray-300 hover:bg-gray-50"
+                              aria-label={`Edit banner for ${group.name}`}
                             >
-                              <Edit2 className="w-3 h-3 mr-1" />
+                              <Edit2 className="w-4 h-4 mr-2" />
                               Edit
                             </Button>
                             {group.banner?.imageUrl && (
@@ -1132,9 +1170,10 @@ export default function AdminDashboard() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleDeleteBanner(group._id)}
-                                className="text-red-600 hover:text-red-700"
+                                className="text-red-600 hover:text-red-700 border-gray-300 hover:bg-gray-50"
+                                aria-label={`Remove banner for ${group.name}`}
                               >
-                                <Trash2 className="w-3 h-3 mr-1" />
+                                <Trash2 className="w-4 h-4 mr-2" />
                                 Remove
                               </Button>
                             )}
@@ -1164,6 +1203,8 @@ export default function AdminDashboard() {
                   value={editGroupName}
                   onChange={(e) => setEditGroupName(e.target.value)}
                   placeholder="Enter group name"
+                  className="border-gray-300"
+                  aria-required="true"
                 />
               </div>
               <div>
@@ -1172,17 +1213,23 @@ export default function AdminDashboard() {
                   id="editGroupDescription"
                   value={editGroupDescription}
                   onChange={(e) => setEditGroupDescription(e.target.value)}
-                  placeholder="Enter group description"
+                  placeholder="Enter group description (optional)"
+                  className="border-gray-300"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingGroup(null)}>
+              <Button
+                variant="outline"
+                onClick={() => setEditingGroup(null)}
+                className="border-gray-300 hover:bg-gray-50"
+              >
                 Cancel
               </Button>
               <Button
                 onClick={handleUpdateGroup}
                 disabled={isUpdatingGroup || !editGroupName.trim()}
+                className="bg-[#0b5cff] hover:bg-blue-700"
               >
                 {isUpdatingGroup ? 'Updating...' : 'Update Group'}
               </Button>
@@ -1192,7 +1239,7 @@ export default function AdminDashboard() {
 
         {/* Banner Management Dialog */}
         <Dialog open={!!bannerGroup} onOpenChange={() => setBannerGroup(null)}>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Manage Group Banner</DialogTitle>
               <DialogDescription>Upload an image and add text for the group banner</DialogDescription>
@@ -1202,7 +1249,7 @@ export default function AdminDashboard() {
                 <Label>Banner Image</Label>
                 <div className="mt-2">
                   {bannerImageUrl && (
-                    <div className="relative w-full h-52 border rounded-lg overflow-hidden mb-2">
+                    <div className="relative w-full h-40 border border-gray-200 rounded-lg overflow-hidden mb-4">
                       <Image
                         fill
                         src={bannerImageUrl}
@@ -1217,12 +1264,14 @@ export default function AdminDashboard() {
                     accept="image/*"
                     onChange={handleBannerUpload}
                     className="hidden"
+                    aria-label="Upload banner image"
                   />
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => bannerFileInputRef.current?.click()}
                     disabled={isUploadingBanner}
+                    className="border-gray-300 hover:bg-gray-50"
                   >
                     {isUploadingBanner ? 'Uploading...' : 'Upload Image'}
                   </Button>
@@ -1235,32 +1284,43 @@ export default function AdminDashboard() {
                   value={bannerText}
                   onChange={(e) => setBannerText(e.target.value)}
                   placeholder="Enter banner text (optional)"
-                  className="mt-2"
+                  className="mt-2 border-gray-300"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setBannerGroup(null)}>
+              <Button
+                variant="outline"
+                onClick={() => setBannerGroup(null)}
+                className="border-gray-300 hover:bg-gray-50"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleUpdateBanner}>Update Banner</Button>
+              <Button
+                onClick={handleUpdateBanner}
+                className="bg-[#0b5cff] hover:bg-blue-700"
+                disabled={!bannerImageUrl && !bannerText}
+              >
+                Update Banner
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         {/* Members Modal */}
         <Dialog open={!!membersModal} onOpenChange={() => setMembersModal(null)}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Group Members - {membersModal?.name}</DialogTitle>
               <DialogDescription>Manage members in this group</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <Input
-                placeholder="Search members by name..."
+                placeholder="Search members by name or username"
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
-                className="w-full"
+                className="border-gray-300"
+                aria-label="Search group members"
               />
               <div className="max-h-60 overflow-y-auto space-y-2">
                 {membersModal?.members
@@ -1269,18 +1329,21 @@ export default function AdminDashboard() {
                     member.username.toLowerCase().includes(memberSearch.toLowerCase())
                   )
                   .map((member: any) => (
-                    <div key={member._id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium text-blue-600">
+                    <div
+                      key={member._id}
+                      className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-r from-[#cdffd8] to-[#94b9ff] rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-gray-900">
                             {member.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div>
-                          <p className="text-sm font-medium">
+                          <p className="text-sm font-medium text-gray-900">
                             {member.name} @{member.username}
                           </p>
-                          <p className="text-xs text-gray-500">{member.phone}</p>
+                          <p className="text-sm text-gray-600">{member.phone}</p>
                         </div>
                       </div>
                       <Button
@@ -1288,7 +1351,8 @@ export default function AdminDashboard() {
                         variant="outline"
                         onClick={() => handleRemoveUser(membersModal._id, member._id, member.name)}
                         disabled={removingMemberId === member._id}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 border-gray-300 hover:bg-gray-50"
+                        aria-label={`Remove ${member.name} from group`}
                       >
                         {removingMemberId === member._id ? 'Removing...' : 'Remove'}
                       </Button>
@@ -1297,7 +1361,13 @@ export default function AdminDashboard() {
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={() => setMembersModal(null)}>Close</Button>
+              <Button
+                onClick={() => setMembersModal(null)}
+                variant="outline"
+                className="border-gray-300 hover:bg-gray-50"
+              >
+                Close
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

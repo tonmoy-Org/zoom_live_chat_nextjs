@@ -116,7 +116,7 @@ export default function Login() {
           <CardHeader className="text-center space-y-3">
             <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-900">
               Welcome to <br />
-              <span className="text-blue-600">Zoom Live Chat</span>
+              <span className="text-[#0b5cff]">Zoom Live Chat</span>
             </CardTitle>
             <CardDescription className="text-gray-600 text-sm">
               Enter your details to access the chat
@@ -138,7 +138,7 @@ export default function Login() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="pl-10 h-10 rounded-full border-gray-300 focus:ring-2 focus:ring-blue-500"
+                    className="pl-10 h-10 rounded-full"
                   />
                 </div>
               </div>
@@ -160,7 +160,7 @@ export default function Login() {
                     minLength={3}
                     maxLength={20}
                     pattern="[a-zA-Z0-9_]+"
-                    className="pl-10 h-10 rounded-full border-gray-300 focus:ring-2 focus:ring-blue-500"
+                    className="pl-10 h-10 rounded-full"
                   />
                 </div>
                 <p className="text-xs text-gray-500">
@@ -182,7 +182,7 @@ export default function Login() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required
-                    className="pl-10 h-10 rounded-full border-gray-300 focus:ring-2 focus:ring-blue-500"
+                    className="pl-10 h-10 rounded-full"
                   />
                 </div>
               </div>
@@ -197,7 +197,7 @@ export default function Login() {
               {/* Submit button */}
               <Button
                 type="submit"
-                className="w-full h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors duration-200"
+                className="w-full h-10 rounded-full bg-[#0b5cff] hover:bg-blue-700 text-white font-medium transition-colors duration-200"
                 disabled={isLoading}
               >
                 {isLoading ? (
