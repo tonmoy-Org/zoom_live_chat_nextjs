@@ -251,12 +251,37 @@ export default function AdminDashboard() {
     }
   };
 
+  const getWordCount = (text: string) => {
+    return text.trim().split(/\s+/).filter(Boolean).length;
+  };
+
   const handleCreateGroup = async () => {
+    const nameWordCount = getWordCount(newGroupName);
+    const descWordCount = getWordCount(newGroupDescription);
+
     if (!newGroupName.trim()) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Group name is required.',
+      });
+      return;
+    }
+
+    if (nameWordCount > 15) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Group name cannot exceed 15 words.',
+      });
+      return;
+    }
+
+    if (descWordCount > 20) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Group description cannot exceed 20 words.',
       });
       return;
     }
@@ -307,11 +332,32 @@ export default function AdminDashboard() {
   };
 
   const handleUpdateGroup = async () => {
+    const nameWordCount = getWordCount(editGroupName);
+    const descWordCount = getWordCount(editGroupDescription);
+
     if (!editGroupName.trim() || !editingGroup) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Group name is required.',
+      });
+      return;
+    }
+
+    if (nameWordCount > 15) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Group name cannot exceed 15 words.',
+      });
+      return;
+    }
+
+    if (descWordCount > 20) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Group description cannot exceed 20 words.',
       });
       return;
     }
@@ -505,11 +551,22 @@ export default function AdminDashboard() {
   };
 
   const handleUpdateBanner = async () => {
+    const textWordCount = getWordCount(bannerText);
+
     if (!bannerGroup) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'No group selected.',
+      });
+      return;
+    }
+
+    if (textWordCount > 40) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Banner text cannot exceed 40 words.',
       });
       return;
     }
@@ -705,17 +762,17 @@ export default function AdminDashboard() {
   return (
     <div>
       <Toaster />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-gray-50 min-h-screen">
+        <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">Admin Dashboard</h1>
-              <p className="text-sm text-gray-600">Manage users, groups, and banners</p>
+              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+              <p className="text-sm text-gray-500 mt-1">Manage users, groups, and banners efficiently</p>
             </div>
             <Button
               onClick={() => router.push('/chat')}
               variant="outline"
-              className="border-gray-300 hover:bg-gray-50"
+              className="border-gray-300 hover:bg-gray-50 text-gray-700"
               size="sm"
             >
               Back to Chat
@@ -724,24 +781,24 @@ export default function AdminDashboard() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white border border-gray-200 rounded-lg">
+          <TabsList className="grid w-full grid-cols-3 bg-white border border-gray-200 rounded-lg shadow-sm">
             <TabsTrigger
               value="users"
-              className="flex items-center gap-2 text-gray-900 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#cdffd8] data-[state=active]:to-[#94b9ff]"
+              className="flex items-center gap-2 text-gray-700 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#cdffd8] data-[state=active]:to-[#94b9ff] data-[state=active]:shadow-inner"
             >
               <Users className="w-4 h-4" />
               <span>Users</span>
             </TabsTrigger>
             <TabsTrigger
               value="groups"
-              className="flex items-center gap-2 text-gray-900 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#cdffd8] data-[state=active]:to-[#94b9ff]"
+              className="flex items-center gap-2 text-gray-700 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#cdffd8] data-[state=active]:to-[#94b9ff] data-[state=active]:shadow-inner"
             >
               <MessageSquare className="w-4 h-4" />
               <span>Groups</span>
             </TabsTrigger>
             <TabsTrigger
               value="banners"
-              className="flex items-center gap-2 text-gray-900 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#cdffd8] data-[state=active]:to-[#94b9ff]"
+              className="flex items-center gap-2 text-gray-700 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#cdffd8] data-[state=active]:to-[#94b9ff] data-[state=active]:shadow-inner"
             >
               <Settings className="w-4 h-4" />
               <span>Banners</span>
@@ -749,23 +806,23 @@ export default function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="users" className="space-y-6">
-            <Card className="border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                  <Users className="w-5 h-5" />
+            <Card className="border-gray-200 shadow-md rounded-xl overflow-hidden">
+              <CardHeader className="bg-white border-b border-gray-200">
+                <CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                  <Users className="w-5 h-5 text-blue-600" />
                   User Management
                 </CardTitle>
-                <p className="text-sm text-gray-600">View and manage all registered users</p>
+                <p className="text-sm text-gray-500">View and manage all registered users</p>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 <div className="mb-4">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       placeholder="Search by name, username, or phone"
                       value={userSearchTerm}
                       onChange={(e) => setUserSearchTerm(e.target.value)}
-                      className="pl-10 border-gray-300"
+                      className="pl-10 border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
                       aria-label="Search users"
                     />
                   </div>
@@ -776,7 +833,7 @@ export default function AdminDashboard() {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowFilters(!showFilters)}
-                    className="flex items-center gap-2 border-gray-300 hover:bg-gray-50"
+                    className="flex items-center gap-2 border-gray-300 hover:bg-gray-50 text-gray-700"
                     aria-expanded={showFilters}
                     aria-controls="filter-panel"
                   >
@@ -788,27 +845,27 @@ export default function AdminDashboard() {
                   {showFilters && (
                     <div
                       id="filter-panel"
-                      className="mt-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm animate-slide-down"
+                      className="mt-4 p-4 bg-white border border-gray-200 rounded-md shadow-sm transition-all duration-200 ease-in-out"
                     >
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="startDate">Start Date</Label>
+                          <Label htmlFor="startDate" className="text-sm font-medium text-gray-700">Start Date</Label>
                           <Input
                             id="startDate"
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="border-gray-300"
+                            className="border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="endDate">End Date</Label>
+                          <Label htmlFor="endDate" className="text-sm font-medium text-gray-700">End Date</Label>
                           <Input
                             id="endDate"
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            className="border-gray-300"
+                            className="border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
                           />
                         </div>
                       </div>
@@ -816,7 +873,7 @@ export default function AdminDashboard() {
                         onClick={clearFilters}
                         variant="outline"
                         size="sm"
-                        className="mt-4 border-gray-300 hover:bg-gray-50"
+                        className="mt-4 border-gray-300 hover:bg-gray-50 text-gray-700"
                       >
                         <X className="w-4 h-4 mr-2" />
                         Clear Filters
@@ -825,21 +882,21 @@ export default function AdminDashboard() {
                   )}
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
                   <Button
                     onClick={handleExportToExcel}
                     size="sm"
-                    className="bg-[#0b5cff] text-white hover:bg-blue-700"
+                    className="bg-blue-600 text-white hover:bg-blue-700 rounded-md"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export to Excel
                   </Button>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-500">
                     Showing {filteredUsers.length} of {users.length} users
                   </p>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {filteredUsers.length === 0 ? (
                     <div className="text-center py-12">
                       <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -850,10 +907,10 @@ export default function AdminDashboard() {
                     filteredUsers.map((user: any) => (
                       <div
                         key={user?._id}
-                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-gray-200 rounded-md shadow-sm hover:shadow-md transition-shadow duration-200"
                       >
                         <div className="flex items-start gap-4 mb-4 sm:mb-0">
-                          <div className="w-10 h-10 bg-gradient-to-r from-[#cdffd8] to-[#94b9ff] rounded-full flex items-center justify-center">
+                          <div className="w-10 h-10 bg-gradient-to-r from-[#cdffd8] to-[#94b9ff] rounded-full flex items-center justify-center shadow-sm">
                             <span className="font-medium text-gray-900">
                               {user?.username?.charAt(0).toUpperCase()}
                             </span>
@@ -875,13 +932,13 @@ export default function AdminDashboard() {
                                   <Badge
                                     key={group?.groupId?._id}
                                     variant="secondary"
-                                    className="text-xs bg-gray-100"
+                                    className="text-xs bg-gray-100 text-gray-600"
                                   >
                                     {group.groupName}
                                   </Badge>
                                 ))}
                                 {user.joinedGroups.length > 2 && (
-                                  <Badge variant="secondary" className="text-xs bg-gray-100">
+                                  <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-600">
                                     +{user.joinedGroups.length - 2} more
                                   </Badge>
                                 )}
@@ -896,8 +953,7 @@ export default function AdminDashboard() {
                               handleUserAction(user._id, newRole === 'admin' ? 'make_admin' : 'make_user')
                             }
                           >
-
-                            <SelectTrigger className="w-full border-gray-300 focus:ring-1 focus:ring-blue-500">
+                            <SelectTrigger className="w-full border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -906,7 +962,7 @@ export default function AdminDashboard() {
                             </SelectContent>
                           </Select>
                           {user.isBlocked && (
-                            <Badge variant="destructive" className="hidden sm:inline-flex">
+                            <Badge variant="destructive" className="hidden sm:inline-flex ml-2">
                               Blocked
                             </Badge>
                           )}
@@ -915,7 +971,7 @@ export default function AdminDashboard() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleUserAction(user._id, user.isBlocked ? 'unblock' : 'block', user.name)}
-                              className={user.isBlocked ? 'text-green-600 hover:text-green-700' : 'text-red-600 hover:text-red-700'}
+                              className={user.isBlocked ? 'text-green-600 hover:text-green-700 border-gray-300 hover:bg-gray-50' : 'text-red-600 hover:text-red-700 border-gray-300 hover:bg-gray-50'}
                               aria-label={user.isBlocked ? 'Unblock user' : 'Block user'}
                             >
                               <Ban className="w-4 h-4 mr-2" />
@@ -925,7 +981,7 @@ export default function AdminDashboard() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleUserAction(user._id, 'delete', user.name)}
-                              className="text-red-600 hover:text-red-700"
+                              className="text-red-600 hover:text-red-700 border-gray-300 hover:bg-gray-50"
                               aria-label="Delete user"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
@@ -942,56 +998,62 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="groups" className="space-y-6">
-            <Card className="border-gray-200 shadow-sm">
-              <CardHeader>
+            <Card className="border-gray-200 shadow-md rounded-xl overflow-hidden">
+              <CardHeader className="bg-white border-b border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
-                    <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                      <MessageSquare className="w-5 h-5" />
+                    <CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                      <MessageSquare className="w-5 h-5 text-blue-600" />
                       Group Management
                     </CardTitle>
-                    <p className="text-sm text-gray-600">Create and manage chat groups</p>
+                    <p className="text-sm text-gray-500">Create and manage chat groups</p>
                   </div>
                   <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
                     <DialogTrigger asChild>
-                      <Button className="bg-[#0b5cff] hover:bg-blue-700 text-white">
+                      <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-md">
                         <Plus className="w-4 h-4 mr-2" />
                         Create Group
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
+                    <DialogContent className="sm:max-w-md rounded-xl">
                       <DialogHeader>
-                        <DialogTitle>Create New Group</DialogTitle>
+                        <DialogTitle className="text-xl">Create New Group</DialogTitle>
                         <DialogDescription>Enter the details for your new chat group</DialogDescription>
                       </DialogHeader>
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         <div>
-                          <Label htmlFor="groupName">Group Name</Label>
+                          <Label htmlFor="groupName" className="text-sm font-medium text-gray-700">Group Name</Label>
                           <Input
                             id="groupName"
                             value={newGroupName}
                             onChange={(e) => setNewGroupName(e.target.value)}
                             placeholder="Enter group name"
-                            className="border-gray-300"
+                            className="border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
                             aria-required="true"
                           />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {getWordCount(newGroupName)} / 15 words
+                          </p>
                         </div>
                         <div>
-                          <Label htmlFor="groupDescription">Description</Label>
+                          <Label htmlFor="groupDescription" className="text-sm font-medium text-gray-700">Description</Label>
                           <Textarea
                             id="groupDescription"
                             value={newGroupDescription}
                             onChange={(e) => setNewGroupDescription(e.target.value)}
                             placeholder="Enter group description (optional)"
-                            className="border-gray-300"
+                            className="border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
                           />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {getWordCount(newGroupDescription)} / 20 words
+                          </p>
                         </div>
                       </div>
-                      <DialogFooter>
+                      <DialogFooter className="mt-6">
                         <Button
                           onClick={handleCreateGroup}
-                          disabled={isCreatingGroup || !newGroupName.trim()}
-                          className="bg-[#0b5cff] hover:bg-blue-700"
+                          disabled={isCreatingGroup || !newGroupName.trim() || getWordCount(newGroupName) > 15 || getWordCount(newGroupDescription) > 20}
+                          className="bg-blue-600 hover:bg-blue-700 rounded-md"
                         >
                           {isCreatingGroup ? 'Creating...' : 'Create Group'}
                         </Button>
@@ -1000,8 +1062,8 @@ export default function AdminDashboard() {
                   </Dialog>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="p-6">
+                <div className="space-y-4">
                   {groups.length === 0 ? (
                     <div className="text-center py-12">
                       <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -1012,18 +1074,18 @@ export default function AdminDashboard() {
                     groups.map((group: any) => (
                       <div
                         key={group._id}
-                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-gray-200 rounded-md shadow-sm hover:shadow-md transition-shadow duration-200"
                       >
                         <div className="flex-1 mb-4 sm:mb-0">
                           <h3 className="font-semibold text-gray-900">{group?.name}</h3>
                           <p className="text-sm text-gray-600 max-w-xl truncate">{group?.description || 'No description'}</p>
                           <div className="flex items-center text-sm mt-1">
-                            <LinkIcon className="w-4 h-4 mr-2 text-[#0b5cff]" />
+                            <LinkIcon className="w-4 h-4 mr-2 text-blue-600" />
                             <a
                               href={`https://zoomchat.cloud/invite/${group?.inviteCode}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[#0b5cff] hover:underline break-all"
+                              className="text-blue-600 hover:underline break-all"
                             >
                               https://zoomchat.cloud/invite/{group?.inviteCode}
                             </a>
@@ -1031,13 +1093,13 @@ export default function AdminDashboard() {
                           <div className="flex flex-wrap items-center gap-2 mt-2">
                             <Badge
                               variant="secondary"
-                              className="cursor-pointer bg-gray-100 hover:bg-gray-200"
+                              className="cursor-pointer bg-gray-100 text-gray-600 hover:bg-gray-200"
                               onClick={() => setMembersModal(group)}
                             >
                               {group?.members?.length || 0} members
                             </Badge>
                             {group?.banner?.imageUrl && (
-                              <Badge variant="secondary" className="bg-gray-100">
+                              <Badge variant="secondary" className="bg-gray-100 text-gray-600">
                                 Has Banner
                               </Badge>
                             )}
@@ -1048,7 +1110,7 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => copyInviteLink(group?.inviteCode)}
-                            className="flex-1 sm:flex-none border-gray-300 hover:bg-gray-50"
+                            className="flex-1 sm:flex-none border-gray-300 hover:bg-gray-50 text-gray-700"
                             aria-label="Copy invite link"
                           >
                             <LinkIcon className="w-4 h-4 mr-2" />
@@ -1058,7 +1120,7 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleEditGroup(group)}
-                            className="flex-1 sm:flex-none border-gray-300 hover:bg-gray-50"
+                            className="flex-1 sm:flex-none border-gray-300 hover:bg-gray-50 text-gray-700"
                             aria-label="Edit group"
                           >
                             <Edit2 className="w-4 h-4 mr-2" />
@@ -1068,7 +1130,7 @@ export default function AdminDashboard() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="w-full border-gray-300 hover:bg-gray-50"
+                              className="w-full border-gray-300 hover:bg-gray-50 text-gray-700"
                               aria-label="View group"
                             >
                               View
@@ -1105,16 +1167,16 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="banners" className="space-y-6">
-            <Card className="border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                  <Settings className="w-5 h-5" />
+            <Card className="border-gray-200 shadow-md rounded-xl overflow-hidden">
+              <CardHeader className="bg-white border-b border-gray-200">
+                <CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                  <Settings className="w-5 h-5 text-blue-600" />
                   Group Banners
                 </CardTitle>
-                <p className="text-sm text-gray-600">Manage banners for chat groups</p>
+                <p className="text-sm text-gray-500">Manage banners for chat groups</p>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="p-6">
+                <div className="space-y-4">
                   {groups.length === 0 ? (
                     <div className="text-center py-12">
                       <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -1125,14 +1187,14 @@ export default function AdminDashboard() {
                     groups.map((group: any) => (
                       <div
                         key={group._id}
-                        className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                        className="p-4 bg-white border border-gray-200 rounded-md shadow-sm hover:shadow-md transition-shadow duration-200"
                       >
                         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                           <div className="flex-1">
                             <h3 className="font-semibold text-gray-900 mb-2">{group.name}</h3>
                             {group.banner?.imageUrl ? (
                               <div className="mb-4">
-                                <div className="relative w-full max-w-md h-32 border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="relative w-full max-w-md h-32 border border-gray-200 rounded-md overflow-hidden shadow-sm">
                                   <Image
                                     fill
                                     src={group.banner.imageUrl}
@@ -1141,7 +1203,7 @@ export default function AdminDashboard() {
                                   />
                                 </div>
                                 {group.banner.text && (
-                                  <p className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                                  <p className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded-md">
                                     {group.banner.text}
                                   </p>
                                 )}
@@ -1159,7 +1221,7 @@ export default function AdminDashboard() {
                                 setBannerText(group.banner?.text || '');
                                 setBannerImageUrl(group.banner?.imageUrl || '');
                               }}
-                              className="border-gray-300 hover:bg-gray-50"
+                              className="border-gray-300 hover:bg-gray-50 text-gray-700"
                               aria-label={`Edit banner for ${group.name}`}
                             >
                               <Edit2 className="w-4 h-4 mr-2" />
@@ -1190,46 +1252,52 @@ export default function AdminDashboard() {
 
         {/* Edit Group Dialog */}
         <Dialog open={!!editingGroup} onOpenChange={() => setEditingGroup(null)}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md rounded-xl">
             <DialogHeader>
-              <DialogTitle>Edit Group</DialogTitle>
+              <DialogTitle className="text-xl">Edit Group</DialogTitle>
               <DialogDescription>Update the group name and description</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <Label htmlFor="editGroupName">Group Name</Label>
+                <Label htmlFor="editGroupName" className="text-sm font-medium text-gray-700">Group Name</Label>
                 <Input
                   id="editGroupName"
                   value={editGroupName}
                   onChange={(e) => setEditGroupName(e.target.value)}
                   placeholder="Enter group name"
-                  className="border-gray-300"
+                  className="border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
                   aria-required="true"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  {getWordCount(editGroupName)} / 15 words
+                </p>
               </div>
               <div>
-                <Label htmlFor="editGroupDescription">Description</Label>
+                <Label htmlFor="editGroupDescription" className="text-sm font-medium text-gray-700">Description</Label>
                 <Textarea
                   id="editGroupDescription"
                   value={editGroupDescription}
                   onChange={(e) => setEditGroupDescription(e.target.value)}
                   placeholder="Enter group description (optional)"
-                  className="border-gray-300"
+                  className="border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  {getWordCount(editGroupDescription)} / 20 words
+                </p>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="mt-6">
               <Button
                 variant="outline"
                 onClick={() => setEditingGroup(null)}
-                className="border-gray-300 hover:bg-gray-50"
+                className="border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleUpdateGroup}
-                disabled={isUpdatingGroup || !editGroupName.trim()}
-                className="bg-[#0b5cff] hover:bg-blue-700"
+                disabled={isUpdatingGroup || !editGroupName.trim() || getWordCount(editGroupName) > 15 || getWordCount(editGroupDescription) > 20}
+                className="bg-blue-600 hover:bg-blue-700 rounded-md"
               >
                 {isUpdatingGroup ? 'Updating...' : 'Update Group'}
               </Button>
@@ -1239,17 +1307,17 @@ export default function AdminDashboard() {
 
         {/* Banner Management Dialog */}
         <Dialog open={!!bannerGroup} onOpenChange={() => setBannerGroup(null)}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg rounded-xl">
             <DialogHeader>
-              <DialogTitle>Manage Group Banner</DialogTitle>
+              <DialogTitle className="text-xl">Manage Group Banner</DialogTitle>
               <DialogDescription>Upload an image and add text for the group banner</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <Label>Banner Image</Label>
+                <Label className="text-sm font-medium text-gray-700">Banner Image</Label>
                 <div className="mt-2">
                   {bannerImageUrl && (
-                    <div className="relative w-full h-40 border border-gray-200 rounded-lg overflow-hidden mb-4">
+                    <div className="relative w-full h-40 border border-gray-200 rounded-md overflow-hidden mb-4 shadow-sm">
                       <Image
                         fill
                         src={bannerImageUrl}
@@ -1271,35 +1339,38 @@ export default function AdminDashboard() {
                     variant="outline"
                     onClick={() => bannerFileInputRef.current?.click()}
                     disabled={isUploadingBanner}
-                    className="border-gray-300 hover:bg-gray-50"
+                    className="border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md"
                   >
                     {isUploadingBanner ? 'Uploading...' : 'Upload Image'}
                   </Button>
                 </div>
               </div>
               <div>
-                <Label htmlFor="bannerText">Banner Text</Label>
+                <Label htmlFor="bannerText" className="text-sm font-medium text-gray-700">Banner Text</Label>
                 <Textarea
                   id="bannerText"
                   value={bannerText}
                   onChange={(e) => setBannerText(e.target.value)}
                   placeholder="Enter banner text (optional)"
-                  className="mt-2 border-gray-300"
+                  className="mt-2 border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  {getWordCount(bannerText)} / 40 words
+                </p>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="mt-6">
               <Button
                 variant="outline"
                 onClick={() => setBannerGroup(null)}
-                className="border-gray-300 hover:bg-gray-50"
+                className="border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleUpdateBanner}
-                className="bg-[#0b5cff] hover:bg-blue-700"
-                disabled={!bannerImageUrl && !bannerText}
+                className="bg-blue-600 hover:bg-blue-700 rounded-md"
+                disabled={(!bannerImageUrl && !bannerText) || getWordCount(bannerText) > 40}
               >
                 Update Banner
               </Button>
@@ -1309,9 +1380,9 @@ export default function AdminDashboard() {
 
         {/* Members Modal */}
         <Dialog open={!!membersModal} onOpenChange={() => setMembersModal(null)}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg rounded-xl">
             <DialogHeader>
-              <DialogTitle>Group Members - {membersModal?.name}</DialogTitle>
+              <DialogTitle className="text-xl">Group Members - {membersModal?.name}</DialogTitle>
               <DialogDescription>Manage members in this group</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -1319,7 +1390,7 @@ export default function AdminDashboard() {
                 placeholder="Search members by name or username"
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
-                className="border-gray-300"
+                className="border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
                 aria-label="Search group members"
               />
               <div className="max-h-60 overflow-y-auto space-y-2">
@@ -1331,10 +1402,10 @@ export default function AdminDashboard() {
                   .map((member: any) => (
                     <div
                       key={member._id}
-                      className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-md shadow-sm"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-r from-[#cdffd8] to-[#94b9ff] rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 bg-gradient-to-r from-[#cdffd8] to-[#94b9ff] rounded-full flex items-center justify-center shadow-sm">
                           <span className="text-sm font-medium text-gray-900">
                             {member.name.charAt(0).toUpperCase()}
                           </span>
@@ -1351,7 +1422,7 @@ export default function AdminDashboard() {
                         variant="outline"
                         onClick={() => handleRemoveUser(membersModal._id, member._id, member.name)}
                         disabled={removingMemberId === member._id}
-                        className="text-red-600 hover:text-red-700 border-gray-300 hover:bg-gray-50"
+                        className="text-red-600 hover:text-red-700 border-gray-300 hover:bg-gray-50 rounded-md"
                         aria-label={`Remove ${member.name} from group`}
                       >
                         {removingMemberId === member._id ? 'Removing...' : 'Remove'}
@@ -1360,11 +1431,11 @@ export default function AdminDashboard() {
                   ))}
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="mt-6">
               <Button
                 onClick={() => setMembersModal(null)}
                 variant="outline"
-                className="border-gray-300 hover:bg-gray-50"
+                className="border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md"
               >
                 Close
               </Button>

@@ -174,7 +174,7 @@ export default function ChatDashboard() {
   }
 
   return (
-    <div className=" bg-gray-100">
+    <div>
       <Toaster />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}

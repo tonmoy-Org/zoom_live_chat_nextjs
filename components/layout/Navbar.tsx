@@ -149,18 +149,18 @@ export default function Navbar() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
-                    className="w-64 border border-gray-200 shadow-lg rounded-lg bg-white p-2"
+                    className="w-72 border border-gray-200 shadow-lg rounded-lg bg-white p-2"
                     align="end"
                     forceMount
                   >
-                    <div className="flex items-center gap-3 p-3">
+                    <div className="flex items-center gap-3 p-3 w-full">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-gradient-to-r from-[#cdffd8] to-[#94b9ff]  text-gray-900 font-medium border border-gray-200">
                           {session.user.name?.charAt(0).toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col space-y-1">
-                        <p className="font-medium text-gray-900 truncate">{session.user.name}</p>
+                        <p className="font-medium text-gray-900">{session.user.name}</p>
                         <p className="text-xs text-gray-500">@{session.user.username}</p>
                         <p className="text-xs text-gray-500 truncate">{session.user.phone}</p>
                       </div>

@@ -13,7 +13,6 @@ import CustomFooter from '@/components/layout/CustomFooter';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 
-
 export default function Login() {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -24,7 +23,11 @@ export default function Login() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams?.get('callbackUrl') || '/chat';
-  const { toast } = useToast(); // Initialize the toast hook
+  const { toast } = useToast();
+
+  const getWordCount = (text: string) => {
+    return text.trim().split(/\s+/).filter(Boolean).length;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,22 +39,48 @@ export default function Login() {
     if (!name.trim() || !username.trim() || !phone.trim()) {
       setError('All fields are required');
       toast({
-        title: "Validation Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
+        title: 'Validation Error',
+        description: 'Please fill in all fields',
+        variant: 'destructive',
         duration: 3000,
       });
       return;
     }
 
-    // Username validation
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-    if (!usernameRegex.test(username)) {
-      setError('Username must be 3-20 characters and contain only letters, numbers, and underscores');
+    // Name validation: fewer than 8 words
+    const nameWordCount = getWordCount(name);
+    if (nameWordCount >= 8) {
+      setError('Name must contain fewer than 8 words');
       toast({
-        title: "Invalid Username",
-        description: "Use 3-20 characters with letters, numbers, and underscores only",
-        variant: "destructive",
+        title: 'Invalid Name',
+        description: 'Name must contain fewer than 8 words',
+        variant: 'destructive',
+        duration: 3000,
+      });
+      return;
+    }
+
+    // Username validation: fewer than 8 characters, letters, numbers, underscores
+    const usernameRegex = /^[a-zA-Z0-9_]{1,7}$/;
+    if (!usernameRegex.test(username)) {
+      setError('Username must be 1-7 characters and contain only letters, numbers, and underscores');
+      toast({
+        title: 'Invalid Username',
+        description: 'Use 1-12 characters with letters, numbers, and underscores only',
+        variant: 'destructive',
+        duration: 3000,
+      });
+      return;
+    }
+
+    // Phone number validation: Bangladeshi number
+    const phoneRegex = /^(?:\+8801[3-9]\d{8}|01[3-9]\d{8})$/;
+    if (!phoneRegex.test(phone)) {
+      setError('Please enter a valid Bangladeshi phone number (e.g., +8801XXXXXXXXX or 01XXXXXXXXX)');
+      toast({
+        title: 'Invalid Phone Number',
+        description: 'Use a valid Bangladeshi phone number (e.g., +8801XXXXXXXXX or 01XXXXXXXXX)',
+        variant: 'destructive',
         duration: 3000,
       });
       return;
@@ -70,17 +99,16 @@ export default function Login() {
       if (result?.error) {
         setError(result.error);
         toast({
-          title: "Login Failed",
+          title: 'Login Failed',
           description: result.error,
-          variant: "destructive",
+          variant: 'destructive',
           duration: 3000,
         });
       } else {
-        // Show success toast
         toast({
-          title: "Welcome!",
-          description: `Hello ${name}, you're now logged in`,
-          variant: "default",
+          title: 'Welcome!',
+          description: `Hello ${name.split(' ')[0]}, you're now logged in`,
+          variant: 'default',
           duration: 2000,
         });
 
@@ -98,9 +126,9 @@ export default function Login() {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred during login';
       setError(errorMessage);
       toast({
-        title: "Login Error",
+        title: 'Login Error',
         description: errorMessage,
-        variant: "destructive",
+        variant: 'destructive',
         duration: 3000,
       });
     } finally {
@@ -157,14 +185,14 @@ export default function Login() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
-                    minLength={3}
-                    maxLength={20}
+                    minLength={1}
+                    maxLength={12}
                     pattern="[a-zA-Z0-9_]+"
                     className="pl-10 h-10 rounded-full"
                   />
                 </div>
                 <p className="text-xs text-gray-500">
-                  3-20 characters, letters, numbers, and underscores only
+                  1-12 characters, letters, numbers, and underscores only
                 </p>
               </div>
 
@@ -178,7 +206,7 @@ export default function Login() {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="Enter your phone number"
+                    placeholder="e.g., +8801XXXXXXXXX or 01XXXXXXXXX"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required

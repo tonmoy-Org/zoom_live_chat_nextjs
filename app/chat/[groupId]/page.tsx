@@ -94,7 +94,7 @@ export default function ChatGroup() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [deletingMessageConfirmation, setDeletingMessageConfirmation] = useState<string | null>(null);
   const [blockUserConfirmation, setBlockUserConfirmation] = useState<{ userId: string; userName: string; isCurrentlyBlocked: boolean } | null>(null);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -915,8 +915,8 @@ export default function ChatGroup() {
                 {notificationsEnabled ? (
                   < BellOffIcon className="w-4 h-4 mr-2" />
                 ) : (
-                <Bell className="w-4 h-4 mr-2" />
-              )}
+                  <Bell className="w-4 h-4 mr-2" />
+                )}
                 {notificationsEnabled ? 'Disable Notifications' : 'Enable Notifications'}
               </Button>
               {session?.user?.role === 'admin' && (
@@ -961,7 +961,7 @@ export default function ChatGroup() {
               />
             )}
             {group.banner.text && (
-              <p className="text-sm sm:text-base font-medium text-gray-900 truncate">{group.banner.text}</p>
+              <p className="text-sm lg:max-w-3xl w-full sm:text-base font-medium text-gray-900">{group.banner.text}</p>
             )}
           </div>
         </div>
