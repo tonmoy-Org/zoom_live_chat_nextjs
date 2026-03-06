@@ -1,102 +1,123 @@
-# Zoom Live Chat
+# 🎥 Zoom Live Chat
 
-## Overview
+[![Next.js](https://img.shields.io/badge/Next.js-13.5-black?style=flat&logo=next.js)](https://nextjs.org/)
+[![Socket.io](https://img.shields.io/badge/Socket.io-4.8-blue?style=flat&logo=socket.io)](https://socket.io/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-8.17-green?style=flat&logo=mongodb)](https://www.mongodb.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.3-38B2AC?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
 
-The `ChatGroup` component is a React-based group chat interface for **Zoom Live Chat** ([zoomchat.cloud](https://zoomchat.cloud)), built with Next.js and TypeScript. It enables real-time messaging via Socket.IO, image uploads through Cloudinary, and admin controls for managing messages and group settings. Integrated with `next-auth` for authentication and `shadcn/ui` for a responsive UI, it provides seamless group communication for users.
+A high-performance, real-time group chat application designed for the **Zoom Live Chat** ecosystem. Built with a modern tech stack to provide seamless communication, media sharing, and administrative control.
 
-## Features
+---
 
-- Real-time text and image messaging with Socket.IO.
-- Secure authentication via `next-auth`, redirecting unauthenticated users to login.
-- Image uploads via Cloudinary, displayed inline.
-- Admin controls: edit/delete messages, block/unblock users, manage group settings.
-- Responsive design with mobile-friendly menu and smooth scrolling.
-- Toast notifications for user actions and confirmations.
-- Group banner display and searchable member list for admins.
+## 🚀 Key Features
 
-## Installation
+- **Real-Time Communication**: Instant messaging powered by Socket.io.
+- **Media Sharing**: Direct image uploads and previews via Cloudinary integration.
+- **Secure Authentication**: Custom NextAuth.js implementation using Username/Phone identifiers.
+- **Admin Dashboard**: Comprehensive tools to manage messages, block/unblock users, and moderate chat groups.
+- **Responsive UI**: Sleek, mobile-first design using Tailwind CSS and Radix UI primitives.
+- **Live Notifications**: Real-time toast notifications for system alerts and user actions.
+
+---
+
+## 🏗️ Architecture & Technology Stack
+
+### Core Technologies
+- **Framework**: [Next.js 13](https://nextjs.org/) (App Router)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) & [Shadcn UI](https://ui.shadcn.com/)
+- **Real-time**: [Socket.io](https://socket.io/)
+- **Database**: [MongoDB](https://www.mongodb.com/) with [Mongoose](https://mongoosejs.com/)
+- **Authentication**: [NextAuth.js](https://next-auth.js.org/)
+- **Storage**: [Cloudinary](https://cloudinary.com/)
+
+---
+
+## ⚙️ Working Process & Logic
+
+### 1. Authentication Flow
+Users log in using their **Name**, **Username**, and **Phone Number**. 
+- The system checks if the user exists in MongoDB.
+- If it's a new user, an account is created automatically.
+- Sessions are managed via JWT using `next-auth`.
+
+### 2. Real-Time Socket Connection
+- Upon entering a chat room (`/chat/[groupId]`), the client initializes a connection to `/api/socket`.
+- The client emits `join-group` with the `groupId`.
+- Messages sent via `send-message` are broadcasted to all users in the specific room using `socket.to(groupId).emit('new-message')`.
+
+### 3. Media Handling
+- Images are processed using `next-cloudinary`.
+- When a user uploads an image, it is sent to Cloudinary.
+- The returned image URL is then wrapped in a message object and sent through the socket and saved to the database.
+
+### 4. Admin Management
+- Admins have access to extended permissions.
+- **Moderation**: Can delete or edit any message in the group.
+- **User Control**: Ability to block/unblock users by updating their status in the database.
+
+---
+
+## 🛠️ Installation & Setup
 
 ### Prerequisites
-- Node.js (v16+)
-- Next.js (v13+ with App Router)
-- Cloudinary account
-- Backend API with Socket.IO and MongoDB (or similar)
+- Node.js 18.x or higher
+- MongoDB instance (Atlas or local)
+- Cloudinary account for media storage
 
-### Steps
-1. **Clone Repository**:
+### Step-by-Step Guide
+
+1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd zoom-live-chat
+   git clone https://github.com/react-labs-org/zoom_live_chat.git
+   cd zoom_live_chat
    ```
 
-2. **Install Dependencies**:
+2. **Install dependencies**
    ```bash
    npm install
    ```
-   Key dependencies: `next-auth`, `socket.io-client`, `lucide-react`, `shadcn/ui`, `next/image`.
 
-3. **Set Environment Variables**:
-   In `.env.local`:
+3. **Configure Environment Variables**
+   Create a `.env.local` file in the root directory:
    ```env
-   NEXTAUTH_URL=https://zoomchat.cloud
-   NEXTAUTH_SECRET=<your-secret>
-   CLOUDINARY_CLOUD_NAME=ddh86gfrm
-   CLOUDINARY_UPLOAD_PRESET=ml_default
-   NEXT_PUBLIC_API_URL=<backend-api-url>
+   # Database
+   MONGODB_URI=your_mongodb_uri
+
+   # Auth
+   NEXTAUTH_URL=http://localhost:3000
+   NEXTAUTH_SECRET=your_nextauth_secret
+
+   # Cloudinary
+   CLOUDINARY_CLOUD_NAME=your_cloud_name
+   CLOUDINARY_API_KEY=your_api_key
+   CLOUDINARY_API_SECRET=your_api_secret
+   CLOUDINARY_UPLOAD_PRESET=your_preset
+
+   # Public API
+   NEXT_PUBLIC_API_URL=http://localhost:3000
    ```
 
-4. **Run Application**:
+4. **Run the development server**
    ```bash
    npm run dev
    ```
-   Access at `http://localhost:3000` or deploy to [zoomchat.cloud](https://zoomchat.cloud).
 
-## Usage
+---
 
-- **Access**: Navigate to `/chat/[groupId]` on [zoomchat.cloud](https://zoomchat.cloud). Requires authentication.
-- **Messaging**: Send text or images using the input field or paperclip icon.
-- **Admin Features**:
-  - Edit/delete messages or block/unblock users via message controls.
-  - Manage messaging settings (e.g., restrict users) in the settings dialog.
-- **Notifications**: Toasts confirm actions or display errors.
+## 🧪 API Endpoints
 
-## Dependencies
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/socket` | GET | Initializes the Socket.io server |
+| `/api/messages` | GET | Fetches message history for a group |
+| `/api/admin/users` | PATCH | Block/Unblock users |
+| `/api/groups/settings`| PATCH | Update group configuration |
 
-- **Frontend**: `next-auth`, `socket.io-client`, `lucide-react`, `next/image`, `shadcn/ui` (Button, Input, Card, etc.).
-- **Backend**: Assumes Node.js/Express with Socket.IO, MongoDB, and Cloudinary API.
+---
 
-## API Endpoints
+## 📄 License
 
-- `GET /api/socket`: Initialize Socket.IO.
-- `GET /api/groups/:groupId/messages`: Fetch messages.
-- `POST /api/groups/:groupId/messages`: Send messages.
-- `PATCH /api/admin/messages/:messageId`: Edit message.
-- `DELETE /api/admin/messages/:messageId`: Delete message.
-- `POST /api/admin/groups/:groupId/block-user`: Block/unblock user.
-- `GET /api/admin/groups/:groupId/settings`: Fetch settings.
-- `PATCH /api/admin/groups/:groupId/settings`: Update settings.
+Distributed under the MIT License. See `LICENSE` for more information.
 
-## Error Handling
-
-- Redirects unauthenticated users to `/login`.
-- Toasts for API errors, empty messages, or invalid image uploads.
-- Validates user IDs and message content.
-
-## Limitations
-
-- "View Members" button lacks functionality (add `onClick` handler if needed).
-- Image uploads tied to Cloudinary.
-- Limited retry logic for API/socket failures.
-
-## Contributing
-
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/your-feature`).
-3. Commit changes (`git commit -m "Add feature"`).
-4. Push branch (`git push origin feature/your-feature`).
-5. Open a pull request.
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).  
-See the LICENSE file for details.
+---
+Developed with ❤️ by [Tonmoy](https://github.com/tonmoy-Org)
